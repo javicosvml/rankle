@@ -61,7 +61,7 @@ python rankle.py example.com
 
 ```bash
 # Basic scan
-python rankle.py www.contraelcancer.es
+python rankle.py example.com
 
 # Expected output:
 # CMS:               Drupal
