@@ -1,0 +1,72 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Output files
+output/
+*.json
+*_rankle.json
+*_rankle_report.txt
+
+# Documentation (keep only README in Docker)
+CHANGELOG.md
+MEJORAS.md
+SUMMARY.md
+QUICKSTART.md
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+test_*.sh
+tests/
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+._*
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Temporary files
+*.log
+*.tmp
+temp/
+tmp/
+
+# Docker files (avoid nested docker)
+docker-compose*.yml
+
+# Examples output
+examples/output/
+
+# Backup files
+*.backup
+*.bak
