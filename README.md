@@ -12,15 +12,19 @@ A comprehensive web infrastructure analyzer using 100% Open Source Python librar
 ## 🎯 Features
 
 - **Enhanced CMS Detection** - 16+ systems including Drupal (15+ patterns), WordPress, Joomla, Magento, TYPO3, Concrete5
+- **Advanced Fingerprinting** - 8 techniques: HTTP methods, server versions, API discovery, exposed files, cookies, error pages, headers, response timing
+- **Cloud Provider Detection** - 14+ providers: AWS, Azure, GCP, DigitalOcean, OVH, Hetzner, Linode, Vultr, Alibaba, Oracle, IBM, Scaleway
+- **Origin Infrastructure Discovery** - Find real servers behind WAF/CDN using 5 passive techniques (MX, SPF, subdomains, SSL SANs, patterns)
 - **CDN Detection** - 20+ providers: TransparentEdge, Cloudflare, Akamai, Fastly, Azure, Google Cloud, MaxCDN
 - **WAF Detection** - 15+ solutions: Imperva, Sucuri, ModSecurity, PerimeterX, DataDome, F5 BIG-IP
+- **API Endpoint Discovery** - Automatic detection of /api, /graphql, /swagger, /actuator, /health, and 15+ common endpoints
 - **DNS Enumeration** - Complete configuration analysis (A, AAAA, MX, NS, TXT, SOA, CNAME)
 - **Subdomain Discovery** - Via Certificate Transparency logs (crt.sh)
 - **JavaScript Libraries** - Detect 15+ libraries: jQuery, Bootstrap, React, Vue, Angular, D3.js
 - **TLS/SSL Analysis** - Certificate inspection, cipher suites, protocol versions
 - **Security Headers** - HTTP security headers audit
 - **WHOIS Lookup** - Enhanced with fallback methods
-- **Geolocation** - Hosting provider and geographic information
+- **Geolocation** - Hosting provider and geographic information with reverse DNS
 - **Export Options** - JSON (machine-readable) and text (human-readable) formats
 
 ## 📋 Table of Contents
@@ -250,6 +254,30 @@ awk '/^\[SUBDOMAINS\]/,/^\[/' report.txt | grep -v "^\["
 - Concrete5 (ccm_)
 - ModX, Wix, Squarespace, Ghost, Hugo, Jekyll, Webflow, PrestaShop, OpenCart
 
+### Cloud Providers (14+)
+
+**Detection Methods:**
+- ASN (Autonomous System Number) matching
+- ISP/Organization name patterns
+- Reverse DNS hostname analysis
+- Confidence scoring (low/medium/high)
+
+**Supported Providers:**
+- **AWS** (Amazon Web Services) - AS16509, AS14618, AS8987
+- **Azure** (Microsoft Azure) - AS8075, AS8068
+- **GCP** (Google Cloud Platform) - AS15169, AS19527, AS396982
+- **DigitalOcean** - AS14061
+- **OVH** - AS16276
+- **Hetzner** - AS24940
+- **Linode** (Akamai) - AS63949
+- **Vultr** - AS20473
+- **Cloudflare** - AS13335
+- **Akamai** - AS20940, AS16625
+- **Alibaba Cloud** - AS45102, AS37963
+- **Oracle Cloud** - AS31898, AS792
+- **IBM Cloud** / Softlayer - AS36351
+- **Scaleway** - AS12876
+
 ### CDN Providers (20+)
 
 - **TransparentEdge** (tp-cache, tedge, edge2befaster) - Enhanced with 6 indicators
@@ -285,6 +313,133 @@ awk '/^\[SUBDOMAINS\]/,/^\[/' report.txt | grep -v "^\["
 - Swiper, Slick
 - AOS, GSAP
 - Modernizr, Popper.js
+
+### Origin Infrastructure Discovery (WAF/CDN Bypass)
+
+**Purpose:** Find real infrastructure behind WAF/CDN protection
+
+**Passive Detection Methods:**
+1. **Subdomain Analysis** - Check non-CDN subdomains (origin, direct, admin, mail, ftp, vpn, cpanel)
+2. **MX Records** - Mail servers often reveal origin network/ASN
+3. **SPF/TXT Records** - Parse SPF records for authorized IP ranges (ip4: directives)
+4. **SSL Certificate SANs** - Analyze Subject Alternative Names for direct-access domains
+5. **Common Patterns** - Test predictable origin domains (origin.*, direct.*, admin.*, backend.*, api.*)
+
+**Example Output:**
+```
+🎯 ORIGIN INFRASTRUCTURE (Behind WAF/CDN)
+════════════════════════════════════════════════════════════════════════════════
+  Detection Methods: mx_records, spf_records, pattern_discovery
+  Origin IPs Found:  4
+
+  Origin Hosting:
+    • 148.163.154.111 → AWS (high confidence)
+    • 148.163.150.174 → AWS (high confidence)
+
+  Direct Access Domains (1 found):
+    • api.nike.com
+```
+
+**Use Cases:**
+- Penetration testing (authorized)
+- Security research
+- Infrastructure analysis
+- Attack surface mapping
+- Competitor analysis
+
+**Ethical Considerations:**
+- ⚠️ All methods are **passive** and use public DNS/SSL data
+- ✅ No active attacks or unauthorized access attempts
+- ✅ Complies with responsible disclosure practices
+- ❌ Do not use for unauthorized security testing
+
+### Advanced Fingerprinting & Technology Detection
+
+**8 Advanced Techniques to identify infrastructure:**
+
+#### **1. HTTP Methods Testing**
+- Tests: OPTIONS, HEAD, TRACE, PUT, DELETE, PATCH
+- Identifies: Misconfigurations, API capabilities, server behavior
+- Example: `api.github.com` allows OPTIONS, HEAD, TRACE, PUT, DELETE, PATCH
+
+#### **2. Server Signature Analysis**
+- Extracts version numbers from Server/X-Powered-By headers
+- Pattern matching for: Apache, Nginx, IIS, LiteSpeed, Tomcat, Node.js, Express
+- Example: `Server: nginx/1.21.6` → Nginx version 1.21.6
+
+#### **3. API Endpoint Discovery**
+- Probes 15+ common endpoints:
+  - REST APIs: `/api`, `/api/v1`, `/api/v2`, `/rest`
+  - GraphQL: `/graphql`
+  - Documentation: `/swagger`, `/api-docs`, `/openapi.json`
+  - Health checks: `/health`, `/status`, `/metrics`, `/actuator`
+  - Configuration: `/config.json`, `/.well-known/security.txt`
+  - CMS: `/wp-json`, `/api/users`
+- Reports: endpoint, status code, content-type
+
+#### **4. Exposed Sensitive Files**
+- Checks for common security issues:
+  - **Development files**: `/phpinfo.php`, `/info.php`
+  - **Version control**: `/.git/config`, `/.git/HEAD`, `/.svn/entries`
+  - **Configuration**: `/.htaccess`, `/web.config`, `/.env`
+  - **Dependencies**: `/composer.json`, `/package.json`, `/yarn.lock`
+  - **Backups**: `/backup.sql`, `/database.sql`
+  - **System files**: `/.DS_Store`
+- ⚠️ **Security Risk**: Reports exposed files
+
+#### **5. Cookie Analysis & Technology Identification**
+- Analyzes cookie names to identify technologies:
+  - `PHPSESSID` → PHP
+  - `JSESSIONID` → Java/Tomcat
+  - `ASP.NET_SessionId` → ASP.NET
+  - `__cfduid` → Cloudflare
+  - `_ga` → Google Analytics
+  - `wordpress_*` → WordPress
+  - `drupal` → Drupal
+- Checks security attributes: Secure, HttpOnly, SameSite
+
+#### **6. Error Page Fingerprinting**
+- Analyzes 404/error pages to identify:
+  - **Web Servers**: Apache, Nginx, IIS, Tomcat
+  - **Frameworks**: Django, Flask, Express, Rails
+- Example: Django error pages reveal "DisallowedHost" and framework version
+
+#### **7. Technology-Specific Headers**
+- Detects headers that reveal infrastructure:
+  - `X-AspNet-Version` → ASP.NET version
+  - `X-Drupal-Cache` → Drupal CMS
+  - `X-Varnish` → Varnish caching
+  - `X-Nginx-Cache-Status` → Nginx caching
+  - `CF-Cache-Status` → Cloudflare
+  - `X-Amz-Cf-Id` → Amazon CloudFront
+  - `X-Azure-Ref` → Microsoft Azure
+
+#### **8. Response Time Analysis**
+- Measures server response time in milliseconds
+- Can indicate:
+  - Server location (latency)
+  - Server load
+  - Caching status
+- Example: 40ms (fast, likely cached or nearby)
+
+**Example Output:**
+```
+🔬 ADVANCED FINGERPRINTING
+════════════════════════════════════════════════════════════════════════════════
+  Server Versions:
+    • Nginx: 1.21.6
+
+  Allowed HTTP Methods: OPTIONS, HEAD, TRACE, PUT, DELETE, PATCH
+
+  Discovered API Endpoints (2):
+    • /graphql [403] - application/json
+    • /status [200] - text/plain
+
+  Technology from Cookies:
+    • Google Analytics
+
+  Response Time: 40.60ms
+```
 
 ### Security & Infrastructure
 

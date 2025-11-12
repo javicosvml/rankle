@@ -40,6 +40,7 @@ venv.bak/
 
 # Output files
 output/
+reports/
 *.json
 *_rankle.json
 *_rankle_report.txt

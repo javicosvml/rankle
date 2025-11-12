@@ -140,6 +140,160 @@ class Rankle:
             print(f"   └─ Error: {str(e)}")
             return {}, None
     
+    def find_origin_infrastructure(self):
+        """
+        Try to find origin infrastructure behind WAF/CDN using passive techniques
+        ETHICAL METHODS ONLY - No active attacks
+        """
+        print("\n🔎 Discovering Origin Infrastructure (behind WAF/CDN)...")
+        
+        origin_ips = set()
+        origin_hostnames = set()
+        methods_found = []
+        
+        # Method 1: Historical DNS records from subdomain enumeration
+        if 'subdomains' in self.results:
+            print("   └─ Method 1: Checking subdomains for origin IPs...")
+            for subdomain in self.results.get('subdomains', [])[:20]:
+                try:
+                    # Look for common non-CDN subdomains
+                    if any(keyword in subdomain.lower() for keyword in ['origin', 'direct', 'admin', 'vpn', 'mail', 'ftp', 'cpanel']):
+                        import dns.resolver
+                        answers = dns.resolver.resolve(subdomain, 'A')
+                        for rdata in answers:
+                            ip = str(rdata)
+                            # Check if it's different from main domain IPs
+                            main_ips = self.results.get('dns', {}).get('A', [])
+                            if ip not in main_ips:
+                                origin_ips.add(ip)
+                                origin_hostnames.add(subdomain)
+                                methods_found.append('subdomain_scan')
+                except:
+                    pass
+        
+        # Method 2: MX records (mail servers often reveal origin network)
+        if 'dns' in self.results and self.results['dns'].get('MX'):
+            print("   └─ Method 2: Analyzing MX records for origin network...")
+            try:
+                mx_records = self.results['dns']['MX']
+                for mx in mx_records[:3]:
+                    mx_host = mx.split()[-1].rstrip('.')
+                    try:
+                        import dns.resolver
+                        answers = dns.resolver.resolve(mx_host, 'A')
+                        for rdata in answers:
+                            ip = str(rdata)
+                            origin_ips.add(ip)
+                            methods_found.append('mx_records')
+                            # Get ASN for this IP to identify hosting
+                            try:
+                                import requests
+                                geo = requests.get(f"https://ipapi.co/{ip}/json/", timeout=5).json()
+                                if 'org' in geo:
+                                    print(f"      • MX IP: {ip} ({geo.get('org', 'Unknown')})")
+                            except:
+                                pass
+                    except:
+                        pass
+            except:
+                pass
+        
+        # Method 3: TXT/SPF records may reveal origin IPs
+        if 'dns' in self.results and self.results['dns'].get('TXT'):
+            print("   └─ Method 3: Parsing SPF/TXT records...")
+            txt_records = self.results['dns']['TXT']
+            for txt in txt_records:
+                # Look for SPF records with IP addresses
+                if 'v=spf1' in txt.lower() or 'ip4:' in txt.lower():
+                    import re
+                    # Extract IPs from SPF
+                    ips = re.findall(r'ip4:(\d+\.\d+\.\d+\.\d+(?:/\d+)?)', txt)
+                    for ip_range in ips:
+                        ip = ip_range.split('/')[0]
+                        origin_ips.add(ip)
+                        methods_found.append('spf_records')
+                        print(f"      • SPF IP: {ip}")
+        
+        # Method 4: Check SSL certificate SAN for origin domains
+        if 'tls' in self.results and self.results['tls'].get('san_domains'):
+            print("   └─ Method 4: Checking SSL SANs for direct-access domains...")
+            san_domains = self.results['tls']['san_domains']
+            for san in san_domains[:10]:
+                if any(keyword in san.lower() for keyword in ['origin', 'direct', 'admin', '-backend', '-api']):
+                    try:
+                        import dns.resolver
+                        answers = dns.resolver.resolve(san, 'A')
+                        for rdata in answers:
+                            ip = str(rdata)
+                            origin_ips.add(ip)
+                            origin_hostnames.add(san)
+                            methods_found.append('ssl_san')
+                    except:
+                        pass
+        
+        # Method 5: Check for common bypasses (www vs non-www, different protocols)
+        print("   └─ Method 5: Testing common origin access patterns...")
+        test_domains = []
+        base = self.domain.replace('www.', '')
+        
+        # Generate test patterns
+        test_domains.extend([
+            f"origin.{base}",
+            f"direct.{base}",
+            f"admin.{base}",
+            f"backend.{base}",
+            f"api.{base}"
+        ])
+        
+        for test_domain in test_domains[:5]:
+            try:
+                import dns.resolver
+                answers = dns.resolver.resolve(test_domain, 'A')
+                for rdata in answers:
+                    ip = str(rdata)
+                    main_ips = self.results.get('dns', {}).get('A', [])
+                    if ip not in main_ips:
+                        origin_ips.add(ip)
+                        origin_hostnames.add(test_domain)
+                        methods_found.append('pattern_discovery')
+                        print(f"      • Found: {test_domain} → {ip}")
+            except:
+                pass
+        
+        # Analyze origin IPs to detect hosting
+        origin_providers = []
+        if origin_ips:
+            print(f"\n   📍 Potential Origin IPs Found: {len(origin_ips)}")
+            for ip in list(origin_ips)[:5]:
+                try:
+                    provider, confidence, hostname = self.detect_cloud_provider(ip)
+                    if provider != "Unknown":
+                        origin_providers.append({
+                            'ip': ip,
+                            'provider': provider,
+                            'confidence': confidence,
+                            'hostname': hostname
+                        })
+                        print(f"      • {ip} → {provider} ({confidence} confidence)")
+                except:
+                    print(f"      • {ip}")
+        
+        # Store results
+        origin_info = {
+            'found': len(origin_ips) > 0,
+            'methods_used': list(set(methods_found)),
+            'origin_ips': list(origin_ips),
+            'origin_hostnames': list(origin_hostnames),
+            'origin_providers': origin_providers
+        }
+        
+        self.results['origin_infrastructure'] = origin_info
+        
+        if not origin_ips:
+            print("   └─ No alternative infrastructure found (strong WAF/CDN)")
+        
+        return origin_info
+    
     def enumerate_subdomains_crtsh(self):
         """
         Enumerate subdomains using Certificate Transparency logs
@@ -287,6 +441,234 @@ class Rankle:
         except Exception as e:
             print(f"   └─ Error: {str(e)}")
             return None
+    
+    def advanced_fingerprinting(self, response=None):
+        """
+        Advanced fingerprinting using multiple techniques
+        """
+        print("\n🔬 Advanced Infrastructure Fingerprinting...")
+        
+        fingerprint_results = {
+            'http_methods': [],
+            'server_fingerprint': {},
+            'api_endpoints': [],
+            'exposed_files': [],
+            'http_response_patterns': {},
+            'cookie_analysis': {},
+            'error_pages': {},
+            'technology_headers': {},
+            'framework_detection': {}
+        }
+        
+        try:
+            if response is None:
+                response = self.session.get(f"https://{self.domain}", timeout=30)
+            
+            # 1. HTTP Methods Testing (OPTIONS, HEAD, TRACE)
+            print("   └─ Testing HTTP methods...")
+            methods_to_test = ['OPTIONS', 'HEAD', 'TRACE', 'PUT', 'DELETE', 'PATCH']
+            allowed_methods = []
+            
+            for method in methods_to_test:
+                try:
+                    resp = self.session.request(method, f"https://{self.domain}", timeout=5)
+                    if resp.status_code not in [405, 501]:
+                        allowed_methods.append(method)
+                except:
+                    pass
+            
+            if allowed_methods:
+                fingerprint_results['http_methods'] = allowed_methods
+                print(f"      • Allowed methods: {', '.join(allowed_methods)}")
+            
+            # 2. Server Signature Analysis
+            print("   └─ Analyzing server signature...")
+            server_header = response.headers.get('Server', '')
+            x_powered_by = response.headers.get('X-Powered-By', '')
+            
+            # Extract version numbers from Server header
+            version_patterns = {
+                'Apache': r'Apache/(\d+\.\d+\.\d+)',
+                'Nginx': r'nginx/(\d+\.\d+\.\d+)',
+                'IIS': r'Microsoft-IIS/(\d+\.\d+)',
+                'LiteSpeed': r'LiteSpeed/(\d+\.\d+\.\d+)',
+                'Tomcat': r'Apache Tomcat/(\d+\.\d+\.\d+)',
+                'Node.js': r'Node\.js/(\d+\.\d+\.\d+)',
+                'Express': r'Express/(\d+\.\d+\.\d+)'
+            }
+            
+            for tech, pattern in version_patterns.items():
+                match = re.search(pattern, server_header, re.IGNORECASE)
+                if match:
+                    fingerprint_results['server_fingerprint'][tech] = match.group(1)
+                    print(f"      • {tech} version: {match.group(1)}")
+            
+            # 3. Common API Endpoints Discovery
+            print("   └─ Probing common API endpoints...")
+            api_endpoints = [
+                '/api', '/api/v1', '/api/v2', '/graphql', '/rest',
+                '/swagger', '/api-docs', '/openapi.json',
+                '/.well-known/security.txt', '/robots.txt', '/sitemap.xml',
+                '/health', '/status', '/metrics', '/actuator',
+                '/.git/config', '/.env', '/config.json',
+                '/wp-json', '/api/users', '/api/config'
+            ]
+            
+            found_endpoints = []
+            for endpoint in api_endpoints[:15]:  # Test first 15
+                try:
+                    test_url = f"https://{self.domain}{endpoint}"
+                    resp = self.session.head(test_url, timeout=3, allow_redirects=False)
+                    if resp.status_code in [200, 201, 301, 302, 403]:
+                        found_endpoints.append({
+                            'endpoint': endpoint,
+                            'status': resp.status_code,
+                            'content_type': resp.headers.get('Content-Type', 'Unknown')
+                        })
+                        print(f"      • Found: {endpoint} [{resp.status_code}]")
+                except:
+                    pass
+            
+            fingerprint_results['api_endpoints'] = found_endpoints
+            
+            # 4. Exposed Sensitive Files
+            print("   └─ Checking for exposed files...")
+            sensitive_files = [
+                '/phpinfo.php', '/info.php', '/.htaccess', '/web.config',
+                '/composer.json', '/package.json', '/yarn.lock',
+                '/.DS_Store', '/backup.sql', '/database.sql',
+                '/.git/HEAD', '/.svn/entries', '/CVS/Entries'
+            ]
+            
+            exposed = []
+            for file_path in sensitive_files[:10]:
+                try:
+                    test_url = f"https://{self.domain}{file_path}"
+                    resp = self.session.head(test_url, timeout=3)
+                    if resp.status_code == 200:
+                        exposed.append(file_path)
+                        print(f"      ⚠️  Exposed: {file_path}")
+                except:
+                    pass
+            
+            fingerprint_results['exposed_files'] = exposed
+            
+            # 5. Cookie Analysis
+            print("   └─ Analyzing cookies...")
+            cookies = response.cookies
+            cookie_info = {}
+            
+            for cookie in cookies:
+                cookie_info[cookie.name] = {
+                    'secure': cookie.secure,
+                    'httponly': cookie.has_nonstandard_attr('HttpOnly'),
+                    'samesite': cookie.get_nonstandard_attr('SameSite', 'None')
+                }
+                
+                # Identify technology by cookie name
+                cookie_techs = {
+                    'PHPSESSID': 'PHP',
+                    'JSESSIONID': 'Java/Tomcat',
+                    'ASP.NET_SessionId': 'ASP.NET',
+                    '__cfduid': 'Cloudflare',
+                    '_ga': 'Google Analytics',
+                    'wordpress_': 'WordPress',
+                    'drupal': 'Drupal'
+                }
+                
+                for pattern, tech in cookie_techs.items():
+                    if pattern.lower() in cookie.name.lower():
+                        print(f"      • {cookie.name} → {tech}")
+                        if 'detected_from_cookies' not in fingerprint_results:
+                            fingerprint_results['detected_from_cookies'] = []
+                        fingerprint_results['detected_from_cookies'].append(tech)
+            
+            fingerprint_results['cookie_analysis'] = cookie_info
+            
+            # 6. Error Page Fingerprinting
+            print("   └─ Fingerprinting error pages...")
+            error_urls = [
+                '/this-page-does-not-exist-404',
+                '/admin/secret',
+                '/test.php?id=1\''  # SQL injection attempt for error detection
+            ]
+            
+            for error_url in error_urls[:1]:  # Just test 404
+                try:
+                    test_url = f"https://{self.domain}{error_url}"
+                    resp = self.session.get(test_url, timeout=5)
+                    
+                    # Analyze error page content
+                    error_patterns = {
+                        'Apache': ['Apache', 'apache2'],
+                        'Nginx': ['nginx'],
+                        'IIS': ['Microsoft-IIS', 'Internet Information Services'],
+                        'Tomcat': ['Apache Tomcat'],
+                        'Django': ['DisallowedHost', 'Django'],
+                        'Flask': ['Werkzeug', 'Flask'],
+                        'Express': ['Express'],
+                        'Rails': ['Ruby on Rails', 'ActionController']
+                    }
+                    
+                    error_text = resp.text.lower()
+                    for tech, patterns in error_patterns.items():
+                        if any(pattern.lower() in error_text for pattern in patterns):
+                            if 'error_page_tech' not in fingerprint_results:
+                                fingerprint_results['error_page_tech'] = []
+                            if tech not in fingerprint_results['error_page_tech']:
+                                fingerprint_results['error_page_tech'].append(tech)
+                                print(f"      • Error page reveals: {tech}")
+                except:
+                    pass
+            
+            # 7. Technology-Specific Headers
+            print("   └─ Analyzing technology-specific headers...")
+            tech_headers = {
+                'X-AspNet-Version': 'ASP.NET',
+                'X-AspNetMvc-Version': 'ASP.NET MVC',
+                'X-Powered-By': 'Various',
+                'X-Generator': 'CMS/Framework',
+                'X-Drupal-Cache': 'Drupal',
+                'X-Drupal-Dynamic-Cache': 'Drupal',
+                'X-Varnish': 'Varnish Cache',
+                'X-Nginx-Cache-Status': 'Nginx',
+                'X-Cache': 'Caching Layer',
+                'CF-Cache-Status': 'Cloudflare',
+                'X-Amz-Cf-Id': 'Amazon CloudFront',
+                'X-Azure-Ref': 'Microsoft Azure'
+            }
+            
+            detected_headers = {}
+            for header, tech in tech_headers.items():
+                if header in response.headers:
+                    detected_headers[header] = {
+                        'technology': tech,
+                        'value': response.headers[header]
+                    }
+                    print(f"      • {header}: {response.headers[header][:50]}")
+            
+            fingerprint_results['technology_headers'] = detected_headers
+            
+            # 8. Response Time Analysis (can indicate technology)
+            print("   └─ Response time analysis...")
+            try:
+                import time
+                start = time.time()
+                self.session.head(f"https://{self.domain}", timeout=10)
+                response_time = (time.time() - start) * 1000
+                fingerprint_results['response_time_ms'] = round(response_time, 2)
+                print(f"      • Response time: {response_time:.2f}ms")
+            except:
+                pass
+            
+            # Store results
+            self.results['advanced_fingerprint'] = fingerprint_results
+            
+            return fingerprint_results
+            
+        except Exception as e:
+            print(f"   └─ Error during fingerprinting: {str(e)}")
+            return fingerprint_results
     
     def detect_technologies(self, response=None):
         """
@@ -701,6 +1083,151 @@ class Rankle:
         
         return None
     
+    def detect_cloud_provider(self, ip, isp_name=None, hostname=None):
+        """
+        Detect cloud/hosting provider based on IP, ISP, and hostname
+        """
+        provider = "Unknown"
+        confidence = "low"
+        
+        # Cloud provider patterns
+        cloud_patterns = {
+            'AWS': {
+                'asn': ['AS16509', 'AS14618', 'AS8987'],
+                'isp': ['amazon', 'aws', 'amazon.com', 'amazon data services'],
+                'hostname': ['amazonaws.com', 'compute.amazonaws', 'ec2', 's3', 'cloudfront'],
+                'ip_ranges': []  # Could add IP ranges
+            },
+            'Azure': {
+                'asn': ['AS8075', 'AS8068'],
+                'isp': ['microsoft', 'azure', 'microsoft corporation'],
+                'hostname': ['azurewebsites', 'azure', 'cloudapp.azure', 'windows.net', 'azureedge'],
+                'ip_ranges': []
+            },
+            'Google Cloud (GCP)': {
+                'asn': ['AS15169', 'AS19527', 'AS139190', 'AS396982'],
+                'isp': ['google', 'google cloud', 'google llc'],
+                'hostname': ['googleusercontent', 'google', 'gcp', 'appspot', '1e100.net'],
+                'ip_ranges': []
+            },
+            'DigitalOcean': {
+                'asn': ['AS14061'],
+                'isp': ['digitalocean', 'digital ocean'],
+                'hostname': ['digitalocean.com', 'digitaloceanspaces'],
+                'ip_ranges': []
+            },
+            'OVH': {
+                'asn': ['AS16276'],
+                'isp': ['ovh', 'ovh sas', 'ovh hosting'],
+                'hostname': ['ovh.net', 'ovh.com', 'ovhcloud.com'],
+                'ip_ranges': []
+            },
+            'Hetzner': {
+                'asn': ['AS24940'],
+                'isp': ['hetzner', 'hetzner online'],
+                'hostname': ['hetzner.de', 'hetzner.com', 'your-server.de'],
+                'ip_ranges': []
+            },
+            'Linode': {
+                'asn': ['AS63949'],
+                'isp': ['linode', 'akamai'],
+                'hostname': ['linode.com', 'linodeusercontent.com'],
+                'ip_ranges': []
+            },
+            'Vultr': {
+                'asn': ['AS20473'],
+                'isp': ['vultr', 'choopa'],
+                'hostname': ['vultr.com', 'choopa.net'],
+                'ip_ranges': []
+            },
+            'Cloudflare': {
+                'asn': ['AS13335'],
+                'isp': ['cloudflare'],
+                'hostname': ['cloudflare.com', 'cloudflare.net'],
+                'ip_ranges': []
+            },
+            'Akamai': {
+                'asn': ['AS20940', 'AS16625', 'AS21342'],
+                'isp': ['akamai'],
+                'hostname': ['akamai.com', 'akamai.net', 'akamaitechnologies'],
+                'ip_ranges': []
+            },
+            'Alibaba Cloud': {
+                'asn': ['AS45102', 'AS37963'],
+                'isp': ['alibaba', 'aliyun'],
+                'hostname': ['aliyun.com', 'alibaba.com'],
+                'ip_ranges': []
+            },
+            'Oracle Cloud': {
+                'asn': ['AS31898', 'AS792'],
+                'isp': ['oracle', 'oracle cloud'],
+                'hostname': ['oraclecloud.com', 'oracle.com'],
+                'ip_ranges': []
+            },
+            'IBM Cloud': {
+                'asn': ['AS36351'],
+                'isp': ['ibm', 'softlayer'],
+                'hostname': ['ibm.com', 'softlayer.com'],
+                'ip_ranges': []
+            },
+            'Scaleway': {
+                'asn': ['AS12876'],
+                'isp': ['scaleway', 'online s.a.s'],
+                'hostname': ['scaleway.com', 'scw.cloud'],
+                'ip_ranges': []
+            }
+        }
+        
+        # Get reverse DNS hostname if not provided
+        if not hostname:
+            try:
+                hostname = socket.gethostbyaddr(ip)[0].lower()
+            except:
+                hostname = ""
+        
+        # Get ISP from geolocation if available
+        if not isp_name and hasattr(self, 'results') and 'geolocation' in self.results:
+            isp_name = self.results['geolocation'].get('isp', '')
+        
+        isp_lower = isp_name.lower() if isp_name else ""
+        hostname_lower = hostname.lower() if hostname else ""
+        
+        # Get ASN from geolocation
+        asn = None
+        if hasattr(self, 'results') and 'geolocation' in self.results:
+            asn = self.results['geolocation'].get('asn', '')
+        
+        # Check patterns for each cloud provider
+        for provider_name, patterns in cloud_patterns.items():
+            match_score = 0
+            
+            # Check ASN (highest confidence)
+            if asn and any(asn_pattern in str(asn) for asn_pattern in patterns['asn']):
+                match_score += 3
+            
+            # Check ISP name
+            if isp_name and any(isp_pattern in isp_lower for isp_pattern in patterns['isp']):
+                match_score += 2
+            
+            # Check hostname/reverse DNS
+            if hostname and any(host_pattern in hostname_lower for host_pattern in patterns['hostname']):
+                match_score += 2
+            
+            # Determine provider based on match score
+            if match_score >= 3:
+                provider = provider_name
+                confidence = "high"
+                break
+            elif match_score >= 2:
+                provider = provider_name
+                confidence = "medium"
+                break
+            elif match_score >= 1:
+                provider = provider_name
+                confidence = "low"
+        
+        return provider, confidence, hostname
+    
     def analyze_geolocation(self, ip):
         """
         Analyze geolocation using free public API
@@ -709,7 +1236,7 @@ class Rankle:
         if not ip:
             return None
         
-        print("\n🌍 Analyzing Geolocation...")
+        print("\n🌍 Analyzing Geolocation and Hosting...")
         
         try:
             response = requests.get(f"https://ipapi.co/{ip}/json/", timeout=10)
@@ -737,6 +1264,21 @@ class Rankle:
             print(f"   └─ ISP: {geo_info['isp']}")
             if geo_info['asn']:
                 print(f"   └─ ASN: {geo_info['asn']}")
+            
+            # Detect cloud provider
+            provider, confidence, hostname = self.detect_cloud_provider(
+                ip, 
+                isp_name=geo_info['isp']
+            )
+            
+            if provider != "Unknown":
+                print(f"   └─ Cloud Provider: {provider} (confidence: {confidence})")
+                if hostname:
+                    print(f"   └─ Hostname: {hostname}")
+            
+            geo_info['cloud_provider'] = provider
+            geo_info['provider_confidence'] = confidence
+            geo_info['hostname'] = hostname
             
             self.results['geolocation'] = geo_info
             return geo_info
@@ -902,6 +1444,9 @@ class Rankle:
         
         self.detect_technologies(response)
         
+        # Advanced fingerprinting
+        self.advanced_fingerprinting(response)
+        
         cnames = dns_records.get('CNAME', [])
         self.detect_cdn_waf(headers, cnames)
         
@@ -912,6 +1457,11 @@ class Rankle:
         
         # Optional WHOIS
         self.whois_lookup()
+        
+        # Try to find origin infrastructure behind WAF/CDN
+        # Only run if CDN/WAF detected
+        if self.results.get('cdn') != 'Not detected' or self.results.get('waf') != 'Not detected':
+            self.find_origin_infrastructure()
         
         print("\n" + "="*80)
         print("✅ Reconnaissance completed")
@@ -1024,6 +1574,46 @@ class Rankle:
             if len(self.results['subdomains']) > 15:
                 print(f"    ... and {len(self.results['subdomains']) - 15} more")
         
+        # Section 5.5: Advanced Fingerprinting
+        if 'advanced_fingerprint' in self.results:
+            fp = self.results['advanced_fingerprint']
+            if any([fp.get('http_methods'), fp.get('api_endpoints'), fp.get('exposed_files'), 
+                   fp.get('server_fingerprint'), fp.get('detected_from_cookies')]):
+                print(f"\n{'═' * 80}")
+                print("🔬 ADVANCED FINGERPRINTING")
+                print("═" * 80)
+                
+                if fp.get('server_fingerprint'):
+                    print(f"  Server Versions:")
+                    for tech, version in fp['server_fingerprint'].items():
+                        print(f"    • {tech}: {version}")
+                
+                if fp.get('http_methods'):
+                    print(f"\n  Allowed HTTP Methods: {', '.join(fp['http_methods'])}")
+                
+                if fp.get('api_endpoints'):
+                    print(f"\n  Discovered API Endpoints ({len(fp['api_endpoints'])}):")
+                    for ep in fp['api_endpoints'][:10]:
+                        print(f"    • {ep['endpoint']} [{ep['status']}] - {ep['content_type']}")
+                
+                if fp.get('exposed_files'):
+                    print(f"\n  ⚠️  Exposed Files ({len(fp['exposed_files'])}):")
+                    for file in fp['exposed_files']:
+                        print(f"    • {file}")
+                
+                if fp.get('detected_from_cookies'):
+                    print(f"\n  Technology from Cookies:")
+                    for tech in set(fp['detected_from_cookies']):
+                        print(f"    • {tech}")
+                
+                if fp.get('error_page_tech'):
+                    print(f"\n  Error Page Analysis:")
+                    for tech in fp['error_page_tech']:
+                        print(f"    • {tech}")
+                
+                if fp.get('response_time_ms'):
+                    print(f"\n  Response Time: {fp['response_time_ms']}ms")
+        
         # Section 6: Geolocation
         if 'geolocation' in self.results:
             print(f"\n{'═' * 80}")
@@ -1034,6 +1624,10 @@ class Rankle:
             print(f"  ISP:               {geo.get('isp', 'N/A')}")
             if geo.get('asn'):
                 print(f"  ASN:               {geo['asn']}")
+            if geo.get('cloud_provider') and geo.get('cloud_provider') != 'Unknown':
+                print(f"  Cloud Provider:    {geo['cloud_provider']} ({geo.get('provider_confidence', 'unknown')} confidence)")
+            if geo.get('hostname'):
+                print(f"  Hostname:          {geo['hostname']}")
         
         # Section 7: WHOIS
         if 'whois' in self.results:
@@ -1045,14 +1639,39 @@ class Rankle:
             print(f"  Created:           {whois.get('creation_date', 'N/A')}")
             print(f"  Expires:           {whois.get('expiration_date', 'N/A')}")
         
+        # Section 8: Origin Infrastructure (if found)
+        if 'origin_infrastructure' in self.results and self.results['origin_infrastructure'].get('found'):
+            print(f"\n{'═' * 80}")
+            print("🎯 ORIGIN INFRASTRUCTURE (Behind WAF/CDN)")
+            print("═" * 80)
+            origin = self.results['origin_infrastructure']
+            print(f"  Detection Methods: {', '.join(origin.get('methods_used', []))}")
+            print(f"  Origin IPs Found:  {len(origin.get('origin_ips', []))}")
+            
+            if origin.get('origin_providers'):
+                print(f"\n  Origin Hosting:")
+                for provider_info in origin['origin_providers'][:5]:
+                    print(f"    • {provider_info['ip']} → {provider_info['provider']} ({provider_info['confidence']} confidence)")
+            
+            if origin.get('origin_hostnames'):
+                print(f"\n  Direct Access Domains ({len(origin['origin_hostnames'])} found):")
+                for hostname in list(origin['origin_hostnames'])[:5]:
+                    print(f"    • {hostname}")
+        
         print(f"\n{'═' * 80}")
         print("✅ Report completed")
         print(f"{'═' * 80}\n")
     
     def save_json(self, filename=None):
         """Save results to JSON file"""
+        import os
+        
         if filename is None:
-            filename = f"{self.domain.replace('.', '_')}_rankle.json"
+            # Create reports directory if it doesn't exist
+            reports_dir = os.path.join(os.getcwd(), 'reports')
+            os.makedirs(reports_dir, exist_ok=True)
+            
+            filename = os.path.join(reports_dir, f"{self.domain.replace('.', '_')}_rankle.json")
         
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(self.results, f, indent=2, ensure_ascii=False, default=str)
@@ -1062,11 +1681,16 @@ class Rankle:
     
     def save_text_report(self, filename=None):
         """Save technical text report without decorations"""
-        if filename is None:
-            filename = f"{self.domain.replace('.', '_')}_rankle_report.txt"
-        
         import io
         import sys
+        import os
+        
+        if filename is None:
+            # Create reports directory if it doesn't exist
+            reports_dir = os.path.join(os.getcwd(), 'reports')
+            os.makedirs(reports_dir, exist_ok=True)
+            
+            filename = os.path.join(reports_dir, f"{self.domain.replace('.', '_')}_rankle_report.txt")
         
         # Capture the output
         old_stdout = sys.stdout
@@ -1080,7 +1704,7 @@ class Rankle:
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(report_content)
         
-        print(f"Report saved: {filename}")
+        print(f"💾 Report saved: {filename}")
         return filename
     
     def print_technical_report(self):
@@ -1108,6 +1732,10 @@ class Rankle:
             print(f"ISP: {geo.get('isp', 'N/A')}")
             if geo.get('asn'):
                 print(f"ASN: {geo['asn']}")
+            if geo.get('cloud_provider') and geo.get('cloud_provider') != 'Unknown':
+                print(f"Cloud Provider: {geo['cloud_provider']} ({geo.get('provider_confidence', 'unknown')} confidence)")
+            if geo.get('hostname'):
+                print(f"Hostname: {geo['hostname']}")
         
         # Technology Stack
         print(f"\n[TECHNOLOGY]")
@@ -1147,6 +1775,23 @@ class Rankle:
         print(f"CDN: {self.results.get('cdn', 'None')}")
         print(f"WAF: {self.results.get('waf', 'None')}")
         
+        # Advanced Fingerprint
+        if 'advanced_fingerprint' in self.results:
+            fp = self.results['advanced_fingerprint']
+            print(f"\n[FINGERPRINTING]")
+            if fp.get('server_fingerprint'):
+                print(f"Server Versions: {', '.join([f'{k}:{v}' for k,v in fp['server_fingerprint'].items()])}")
+            if fp.get('http_methods'):
+                print(f"HTTP Methods: {', '.join(fp['http_methods'])}")
+            if fp.get('api_endpoints'):
+                print(f"API Endpoints: {len(fp['api_endpoints'])} found")
+                for ep in fp['api_endpoints'][:5]:
+                    print(f"  {ep['endpoint']} [{ep['status']}]")
+            if fp.get('exposed_files'):
+                print(f"Exposed Files: {', '.join(fp['exposed_files'])}")
+            if fp.get('response_time_ms'):
+                print(f"Response Time: {fp['response_time_ms']}ms")
+        
         # Subdomains
         if 'subdomains' in self.results and self.results['subdomains']:
             print(f"\n[SUBDOMAINS] ({len(self.results['subdomains'])})")
@@ -1171,6 +1816,18 @@ class Rankle:
             for txt in self.results['dns']['TXT'][:5]:
                 txt_short = txt[:100] if len(txt) > 100 else txt
                 print(f"TXT: {txt_short}")
+        
+        # Origin Infrastructure
+        if 'origin_infrastructure' in self.results and self.results['origin_infrastructure'].get('found'):
+            print(f"\n[ORIGIN_INFRASTRUCTURE]")
+            origin = self.results['origin_infrastructure']
+            print(f"Methods: {', '.join(origin.get('methods_used', []))}")
+            print(f"IPs: {', '.join(origin.get('origin_ips', [])[:5])}")
+            if origin.get('origin_providers'):
+                for provider_info in origin['origin_providers'][:3]:
+                    print(f"Provider: {provider_info['ip']} → {provider_info['provider']} ({provider_info['confidence']})")
+            if origin.get('origin_hostnames'):
+                print(f"Direct Domains: {', '.join(list(origin['origin_hostnames'])[:3])}")
 
 
 
@@ -1265,11 +1922,21 @@ def main():
         # Handle output saving
         if auto_save:
             # Auto-save mode (for Docker/scripts)
+            # Check if /output/ directory exists (Docker mode) or use reports/
+            import os
+            if os.path.exists('/output/'):
+                output_dir = '/output/'
+            else:
+                output_dir = os.path.join(os.getcwd(), 'reports')
+                os.makedirs(output_dir, exist_ok=True)
+            
             if auto_save in ['json', 'both']:
-                rankle.save_json('/output/' + domain.replace('.', '_') + '_rankle.json')
+                json_path = os.path.join(output_dir, domain.replace('.', '_') + '_rankle.json')
+                rankle.save_json(json_path)
             
             if auto_save in ['text', 'both']:
-                rankle.save_text_report('/output/' + domain.replace('.', '_') + '_rankle_report.txt')
+                text_path = os.path.join(output_dir, domain.replace('.', '_') + '_rankle_report.txt')
+                rankle.save_text_report(text_path)
         else:
             # Interactive mode
             try:
