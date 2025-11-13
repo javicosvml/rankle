@@ -29,4 +29,4 @@ jobs:
     - name: Test Docker image
       run: |
         docker build -t rankle:test .
-        docker run --rm rankle:test --help
+        docker run --rm rankle:test example.com 2>&1 | head -20

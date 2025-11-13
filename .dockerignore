@@ -26,6 +26,7 @@ ENV/
 
 # Output files
 output/
+reports/
 *.json
 *_rankle.json
 *_rankle_report.txt
@@ -57,6 +58,8 @@ Desktop.ini
 
 # Temporary files
 *.log
+*.log.*
+logs/
 *.tmp
 temp/
 tmp/
@@ -70,3 +73,17 @@ examples/output/
 # Backup files
 *.backup
 *.bak
+
+# Database files (not needed in container)
+*.db
+*.sqlite
+*.sqlite3
+
+# Additional secrets/credentials
+secrets/
+*.key
+*.pem
+*.crt
+credentials.json
+config.ini
+.credentials

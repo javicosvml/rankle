@@ -14,7 +14,7 @@ Currently supported versions:
 If you discover a security vulnerability in Rankle, please report it responsibly:
 
 1. **DO NOT** open a public issue
-2. Email the details to: [Your email here]
+2. Report via GitHub Security Advisories: https://github.com/javicosvml/rankle/security/advisories/new
 3. Include:
    - Description of the vulnerability
    - Steps to reproduce

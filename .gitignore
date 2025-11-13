@@ -3,7 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
 build/
 develop-eggs/
 dist/
@@ -47,6 +46,8 @@ reports/
 
 # Logs
 *.log
+logs/
+*.log.*
 
 # Testing
 .pytest_cache/
@@ -81,7 +82,6 @@ Temporary Items
 .apdisk
 
 # Linux
-*~
 .fuse_hidden*
 .directory
 .Trash-*
@@ -101,3 +101,28 @@ tmp/
 *.tmp
 *.backup
 *.bak
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Additional secrets/credentials (extra protection)
+secrets/
+*.key
+*.pem
+*.crt
+credentials.json
+config.ini
+.credentials
+
+# Additional environment files
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Additional IDE/Editors
+.fleet/
+*.sublime-project
+*.sublime-workspace

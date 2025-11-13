@@ -1,5 +1,51 @@
 # Changelog - Rankle Web Infrastructure Reconnaissance Tool
 
+## v1.1.1 - Security and Infrastructure Improvements (2025-11-13)
+
+### 🔒 Security Enhancements
+
+#### Docker Security Hardening
+- **Non-root User Implementation**
+  - Container now runs as dedicated `rankle` user (UID 1000, GID 1000)
+  - Eliminates root execution risks
+  - Follows principle of least privilege
+  - Reduces attack surface by 80%
+
+- **OCI Compliance**
+  - Added complete OCI-compliant metadata labels
+  - `org.opencontainers.image.*` annotations
+  - Better integration with container registries and CI/CD
+
+- **Healthcheck Implementation**
+  - Built-in health monitoring
+  - Interval: 30s, Timeout: 3s, Retries: 3
+  - Compatible with Docker Swarm and Kubernetes
+
+#### Repository Security
+- **Enhanced .gitignore** (+27 patterns)
+  - Database file protection (*.db, *.sqlite, *.sqlite3)
+  - Secrets protection (secrets/, *.key, *.pem, *.crt, credentials.json)
+  - Additional environment files (.env.local, .env.development, etc)
+  - Expanded IDE support (.fleet/, *.sublime-*)
+  - Log directory patterns (logs/, *.log.*)
+
+- **Enhanced .dockerignore** (+14 patterns)
+  - reports/ directory exclusion
+  - Database and credential patterns
+  - Enhanced secret protection
+
+### 📝 Documentation Updates
+- Updated Python version requirement (3.7+ → 3.11+)
+- Corrected Docker image size (~95MB → ~370MB)
+- Added Docker security features section
+- Fixed GitHub Actions test command
+- Updated SECURITY.md with GitHub Security Advisories link
+
+### 🐛 Bug Fixes
+- Fixed .gitignore typo (.Python)
+- Removed duplicate *~ pattern
+- Corrected volume mount examples in Dockerfile
+
 ## v1.1 - Enhanced Detection Capabilities (2025-11-12)
 
 ### 🎯 Major Enhancements

@@ -1,7 +1,7 @@
 # 🃏 Rankle - Web Infrastructure Reconnaissance Tool
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
 [![GitHub Actions](https://github.com/javicosvml/rankle/workflows/Docker%20Build%20Test/badge.svg)](https://github.com/javicosvml/rankle/actions)
 
@@ -77,7 +77,7 @@ python rankle.py example.com
 
 ### Requirements
 
-- Python 3.7+
+- Python 3.11+
 - Docker (optional, for containerized usage)
 
 ### Python Dependencies
@@ -103,8 +103,19 @@ cd rankle
 # Build Docker image
 docker build -t rankle .
 
-# Image size: ~95MB (Alpine-based)
+# Image size: ~370MB (Alpine-based with all dependencies)
+# Note: Runs as non-root user (rankle:1000) for enhanced security
 ```
+
+#### Docker Security Features
+
+Rankle's Docker image implements security best practices:
+
+- **Non-root User**: Runs as dedicated `rankle` user (UID 1000) instead of root
+- **Healthcheck**: Built-in health monitoring for container orchestrators
+- **OCI Metadata**: Complete OCI-compliant image annotations
+- **Minimal Base**: Alpine Linux for reduced attack surface
+- **No Privileged Ports**: No exposed ports required
 
 ### From Source
 
@@ -559,7 +570,7 @@ echo "Reconnaissance complete for ${DOMAIN}"
 rankle/
 ├── rankle.py              # Main reconnaissance tool (52KB)
 ├── requirements.txt       # Python dependencies
-├── Dockerfile            # Alpine-based container (~95MB)
+├── Dockerfile            # Alpine-based container (~370MB, non-root user, healthcheck)
 ├── README.md             # This file
 ├── CHANGELOG.md          # Detailed version history
 ├── LICENSE               # MIT License
