@@ -1,6 +1,206 @@
 # Changelog - Rankle Web Infrastructure Reconnaissance Tool
 
-## v1.1.1 - Security and Infrastructure Improvements (2025-11-13)
+All notable changes to Rankle will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [1.0.0] - 2024-11-13
+
+### 🎉 Initial Public Release
+
+First official release of Rankle - A comprehensive web infrastructure reconnaissance tool named after Rankle, Master of Pranks from Magic: The Gathering.
+
+### ✨ Core Features
+
+#### 🔍 Web Technology Detection
+- **CMS Detection** (16+ systems)
+  - Drupal (15+ detection patterns)
+  - WordPress, Joomla, Magento, Shopify
+  - TYPO3, Concrete5, ModX, Ghost, Hugo, Jekyll
+  - Wix, Squarespace, Webflow
+  - PrestaShop, OpenCart
+  
+- **JavaScript Library Detection** (15+ libraries)
+  - Frontend frameworks: React, Vue, Angular, Bootstrap
+  - Data visualization: D3.js, Three.js, Chart.js
+  - Utilities: jQuery, Axios, Lodash, Moment.js
+  - UI components: Swiper, Slick, AOS, GSAP
+  - Tools: Modernizr, Popper.js
+
+#### 🛡️ Security & Infrastructure Analysis
+- **CDN Detection** (20+ providers)
+  - TransparentEdge, Cloudflare, Akamai, Fastly
+  - AWS CloudFront, Azure CDN, Google Cloud CDN
+  - MaxCDN, CDN77, KeyCDN, StackPath, BunnyCDN
+  - Netlify, jsDelivr, Varnish caching
+  
+- **WAF Detection** (15+ solutions)
+  - TransparentEdge WAF, Cloudflare WAF/Bot Management
+  - Imperva/Incapsula, PerimeterX, DataDome
+  - Sucuri, ModSecurity, AWS WAF
+  - F5 BIG-IP ASM, Fortinet FortiWeb
+  - Barracuda, Reblaze, Wallarm, Radware, Citrix NetScaler, Wordfence
+
+- **Cloud Provider Detection** (14+ providers)
+  - AWS (AS16509, AS14618, AS8987)
+  - Azure (AS8075, AS8068)
+  - GCP (AS15169, AS19527, AS396982)
+  - DigitalOcean, OVH, Hetzner, Linode, Vultr
+  - Alibaba Cloud, Oracle Cloud, IBM Cloud, Scaleway
+
+#### 🔬 Advanced Fingerprinting (8 techniques)
+1. **HTTP Methods Testing** - OPTIONS, HEAD, TRACE, PUT, DELETE, PATCH
+2. **Server Signature Analysis** - Version extraction from headers
+3. **API Endpoint Discovery** - 15+ common endpoints (REST, GraphQL, Swagger, health checks)
+4. **Exposed Sensitive Files** - .git, .env, phpinfo.php, backup files
+5. **Cookie Analysis** - Technology identification via cookies
+6. **Error Page Fingerprinting** - Framework detection from error pages
+7. **Technology-Specific Headers** - X-AspNet-Version, X-Drupal-Cache, etc.
+8. **Response Time Analysis** - Server performance metrics
+
+#### 🎯 Origin Infrastructure Discovery
+- **5 Passive Detection Methods:**
+  - Subdomain analysis (origin, direct, admin, mail, ftp, vpn, cpanel)
+  - MX record analysis
+  - SPF/TXT record parsing
+  - SSL Certificate SANs inspection
+  - Common pattern testing
+  
+- Identifies real servers behind WAF/CDN protection
+- Cloud provider detection for origin IPs
+- Direct-access domain discovery
+
+#### 🌐 Network & DNS Analysis
+- **Complete DNS Enumeration**
+  - A, AAAA, MX, NS, TXT, SOA, CNAME records
+  - SPF record analysis
+  - Reverse DNS lookups
+  
+- **Subdomain Discovery**
+  - Certificate Transparency log mining (crt.sh)
+  - Passive subdomain enumeration
+  
+- **Geolocation Information**
+  - ASN and ISP detection
+  - Country and city location
+  - Hosting provider identification
+
+#### 🔐 Security Analysis
+- **TLS/SSL Certificate Analysis**
+  - Certificate validity and expiration
+  - Issuer information
+  - Subject Alternative Names (SANs)
+  - Cipher suites and protocol versions
+  
+- **HTTP Security Headers Audit**
+  - X-Frame-Options, Content-Security-Policy
+  - Strict-Transport-Security (HSTS)
+  - X-XSS-Protection, X-Content-Type-Options
+  - Referrer-Policy, Permissions-Policy
+
+#### 📋 Additional Features
+- **WHOIS Lookup** (Enhanced)
+  - python-whois library integration
+  - Raw socket fallback method
+  - TLD-specific WHOIS servers
+  - Registrar and registration date extraction
+  
+- **Bot Protection Detection**
+  - Voight-Kampff test identification
+  - JavaScript challenge detection
+  - Cookie-based protection detection
+
+### 📤 Export Formats
+
+#### JSON Output
+- Machine-readable structured data
+- Complete scan results with all fields
+- Ideal for automation and integration
+- Compatible with jq, Nuclei, Nmap, httpx
+
+#### Text Output
+- Human-readable technical report
+- Compact, section-based layout
+- grep/awk friendly format
+- Quick manual review
+
+### 🐳 Docker Support
+- **Alpine-based image** (~370MB)
+- **Non-root execution** (rankle user, UID 1000)
+- **Built-in healthcheck** (30s interval)
+- **OCI-compliant** metadata labels
+- **Volume support** for saving reports
+
+### 🔗 Integration Examples
+- Nuclei pipeline integration
+- Nmap scanning automation
+- httpx live host verification
+- Full reconnaissance pipeline scripts
+
+### 📚 Documentation
+- Comprehensive README with 750+ lines
+- Detailed feature descriptions
+- Installation guides (Python, Docker, from source)
+- Usage examples and integration guides
+- Security best practices
+- Contributing guidelines
+- MIT License
+
+### 🛡️ Security Features
+- No shell injection vulnerabilities
+- Input validation with regex
+- Request timeout controls
+- Graceful error handling
+- Realistic User-Agent headers
+- Bot protection awareness
+- Non-root Docker container
+
+### 🔧 Technical Details
+- **Python Version:** 3.11+
+- **Dependencies:** requests, dnspython, beautifulsoup4, python-whois
+- **No API Keys Required:** 100% Open Source libraries
+- **Timeout Handling:** 45s for HTTP, 10s for DNS
+- **Output Directory:** ./output/ for saved reports
+
+### 📊 Detection Statistics
+- **16** CMS systems detected
+- **15+** JavaScript libraries identified
+- **20+** CDN providers recognized
+- **15+** WAF solutions detected
+- **14+** Cloud providers identified
+- **8** Advanced fingerprinting techniques
+- **5** Origin discovery methods
+- **15+** API endpoints probed
+
+### 🎯 Use Cases
+- Authorized penetration testing
+- Bug bounty reconnaissance
+- Security research
+- Infrastructure analysis
+- Attack surface mapping
+- Competitor analysis (ethical)
+
+### ⚠️ Important Notes
+- **Authorized Use Only** - Always obtain proper authorization
+- **Passive Reconnaissance** - No active attacks or exploits
+- **Respects Rate Limits** - Implements timeouts and delays
+- **Educational Purpose** - For learning and authorized testing
+- **Legal Compliance** - Users responsible for compliance with laws
+
+### 🙏 Acknowledgments
+- Named after Rankle, Master of Pranks from Magic: The Gathering
+- Built with 100% Open Source Python libraries
+- No API keys or external services required
+- Community-driven development
+
+---
+
+## [Pre-1.0] - Development Versions
+
+### v1.1.1 - Security and Infrastructure Improvements (2025-11-13)
 
 ### 🔒 Security Enhancements
 
