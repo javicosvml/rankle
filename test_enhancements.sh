@@ -8,7 +8,7 @@ echo ""
 
 # Test domains with different technologies
 DOMAINS=(
-    "www.contraelcancer.es"  # Drupal + TransparentEdge
+    "example.com"             # Test domain
     "wordpress.com"           # WordPress
     "www.joomla.org"         # Joomla
 )

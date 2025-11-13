@@ -155,7 +155,7 @@
 
 ### 📊 Testing Results
 
-**Test Case: www.contraelcancer.es**
+**Test Case: www.example.com**
 - ✅ **CMS Detection:** Successfully detected Drupal (previously: Unknown)
 - ✅ **CDN Detection:** Successfully detected TransparentEdge (working correctly)
 - ✅ **WAF Detection:** Can detect TransparentEdge protection layer
