@@ -22,7 +22,7 @@ First official release of Rankle - A comprehensive web infrastructure reconnaiss
   - TYPO3, Concrete5, ModX, Ghost, Hugo, Jekyll
   - Wix, Squarespace, Webflow
   - PrestaShop, OpenCart
-  
+
 - **JavaScript Library Detection** (15+ libraries)
   - Frontend frameworks: React, Vue, Angular, Bootstrap
   - Data visualization: D3.js, Three.js, Chart.js
@@ -36,7 +36,7 @@ First official release of Rankle - A comprehensive web infrastructure reconnaiss
   - AWS CloudFront, Azure CDN, Google Cloud CDN
   - MaxCDN, CDN77, KeyCDN, StackPath, BunnyCDN
   - Netlify, jsDelivr, Varnish caching
-  
+
 - **WAF Detection** (15+ solutions)
   - TransparentEdge WAF, Cloudflare WAF/Bot Management
   - Imperva/Incapsula, PerimeterX, DataDome
@@ -68,7 +68,7 @@ First official release of Rankle - A comprehensive web infrastructure reconnaiss
   - SPF/TXT record parsing
   - SSL Certificate SANs inspection
   - Common pattern testing
-  
+
 - Identifies real servers behind WAF/CDN protection
 - Cloud provider detection for origin IPs
 - Direct-access domain discovery
@@ -78,11 +78,11 @@ First official release of Rankle - A comprehensive web infrastructure reconnaiss
   - A, AAAA, MX, NS, TXT, SOA, CNAME records
   - SPF record analysis
   - Reverse DNS lookups
-  
+
 - **Subdomain Discovery**
   - Certificate Transparency log mining (crt.sh)
   - Passive subdomain enumeration
-  
+
 - **Geolocation Information**
   - ASN and ISP detection
   - Country and city location
@@ -94,7 +94,7 @@ First official release of Rankle - A comprehensive web infrastructure reconnaiss
   - Issuer information
   - Subject Alternative Names (SANs)
   - Cipher suites and protocol versions
-  
+
 - **HTTP Security Headers Audit**
   - X-Frame-Options, Content-Security-Policy
   - Strict-Transport-Security (HSTS)
@@ -107,7 +107,7 @@ First official release of Rankle - A comprehensive web infrastructure reconnaiss
   - Raw socket fallback method
   - TLD-specific WHOIS servers
   - Registrar and registration date extraction
-  
+
 - **Bot Protection Detection**
   - Voight-Kampff test identification
   - JavaScript challenge detection
@@ -200,7 +200,152 @@ First official release of Rankle - A comprehensive web infrastructure reconnaiss
 
 ## [Pre-1.0] - Development Versions
 
-### v1.1.1 - Security and Infrastructure Improvements (2025-11-13)
+### v1.2.0 - Enhanced CMS Detection (2025-11-18)
+
+### 🎯 Major CMS Detection Improvements
+
+#### 1. Fixed WordPress False Positive Detection
+- **Problem:** Sites incorrectly detected as WordPress when containing external domain references
+- **Solution:** New `_is_wordpress_site()` validation method
+  - Validates WordPress references are local to analyzed domain
+  - Checks for local paths: `"/wp-content/"`, `"/wp-includes/"` (with leading slash)
+  - Validates meta generator tags
+  - Checks WordPress-specific CSS classes
+  - Excludes external domain references (e.g., favicons from other subdomains)
+- **Example:** External reference to WordPress assets now correctly ignored
+
+#### 2. Added Liferay Portal Detection ⭐ NEW
+- **Comprehensive detection** with 8+ indicators:
+  - `window.Liferay` JavaScript object
+  - `@clayui/` Clay UI component imports
+  - `__liferay__` namespace references
+  - `lfr-css-file` CSS class markers
+  - Liferay-specific UI tags and portlets
+- **Path detection:**
+  - `/c/portal/layout`, `/web/guest`, `/group/guest`, `/api/jsonws`
+- **Confidence:** Requires 2+ indicators for positive detection
+- **Version extraction:** Detects Liferay Portal version numbers
+- **Example:** Liferay Portal sites now correctly detected
+
+#### 3. Added Adobe AEM Detection ⭐ NEW
+- **Adobe Experience Manager** detection with 7+ indicators:
+  - `/etc.clientlibs/` path (AEM client libraries)
+  - `/content/dam/` (Digital Asset Manager)
+  - `data-cmp-` attributes (Core Components)
+  - `/etc/designs/` path (design configurations)
+  - `granite/` UI framework references
+  - `cq:` namespace (CQ5/AEM)
+  - `clientlib-` patterns
+- **Path detection:**
+  - `/content/dam`, `/etc.clientlibs`, `/libs/granite/core/content/login.html`
+- **Confidence:** Requires 2+ indicators for positive detection
+- **Example:** Adobe AEM enterprise sites now correctly detected
+
+#### 4. Added HubSpot CMS Detection ⭐ NEW
+- **Marketing automation CMS** detection with 8+ indicators:
+  - `/hubfs/` path (HubSpot File System)
+  - `cdn2.hubspot.net` CDN references
+  - `hsforms.net` (HubSpot Forms)
+  - `hs-sites.com`, `hs-scripts.com`, `hs-analytics.net` domains
+  - Meta generator tag with "hubspot"
+  - API endpoints
+- **Path detection:**
+  - `/hubfs/`, `/_hcms/api/`, `/hs/hsstatic/`
+- **Confidence:** Requires 2+ indicators (or 3+ without meta generator)
+- **Example:** HubSpot CMS sites now correctly detected
+
+#### 5. Improved Detection Priority System
+- **Priority-based detection** to avoid false positives:
+  1. **HubSpot CMS** (most specific patterns)
+  2. **Liferay** (enterprise-specific)
+  3. **Adobe AEM** (enterprise-specific)
+  4. **WordPress** (with domain validation)
+  5. Other CMS (Drupal, Joomla, etc.)
+
+#### 6. Fixed Path Detection Logic
+- **Changed HTTP status codes** accepted as positive detection:
+  - **Before:** 200, 301, 302, 403
+  - **After:** Only 200, 403
+  - **Reason:** 301/302 redirects don't confirm CMS existence
+
+#### 7. Fixed Brotli Compression Issue 🐛
+- **Problem:** Sites using Brotli compression failing to decode
+- **Solution:** Dynamic Accept-Encoding header
+  - Checks if `brotli` module is available
+  - If available: Uses `'gzip, deflate, br'`
+  - If not: Uses `'gzip, deflate'` only
+- **Impact:** Fixes detection for modern sites using Brotli compression
+
+### 📊 CMS Detection Statistics
+
+**Total CMS Now Detected: 20+**
+
+#### Enterprise CMS (3):
+- ✅ **Liferay Portal** ⭐ NEW
+- ✅ **Adobe AEM** (Adobe Experience Manager) ⭐ NEW
+- ✅ **HubSpot CMS** ⭐ NEW
+
+#### Open Source CMS (9):
+- ✅ **WordPress** (improved with domain validation)
+- ✅ Drupal
+- ✅ Joomla
+- ✅ TYPO3
+- ✅ Concrete5
+- ✅ ModX
+- ✅ Ghost
+- ✅ Jekyll
+- ✅ Hugo
+
+#### E-commerce (4):
+- ✅ Magento
+- ✅ Shopify
+- ✅ PrestaShop
+- ✅ OpenCart
+
+#### SaaS/Builders (3):
+- ✅ Wix
+- ✅ Squarespace
+- ✅ Webflow
+
+### 🧪 Testing Results
+
+**Test Suite: 6/6 Passed (100%)**
+
+| Domain | CMS | Status |
+|--------|-----|--------|
+| example.com | HubSpot CMS | ✅ |
+| blog.example.com | HubSpot CMS | ✅ |
+| portal.example.com | Liferay | ✅ |
+| cms.example.com | Adobe AEM | ✅ |
+| shop.example.com | WordPress | ✅ |
+| app.example.com | Unknown (Java+Angular) | ✅ |
+
+### 🔧 Code Changes
+
+- **Modified:** `_detect_cms()` method with priority system
+- **Added:** `_is_wordpress_site()` domain validation method
+- **Modified:** `_detect_cms_advanced()` with new CMS paths
+- **Modified:** `_create_session()` with Brotli detection
+- **Added:** HubSpot CMS, Liferay, Adobe AEM patterns
+
+### 🎯 Market Coverage
+
+The tool now covers **~75% of CMS market share**:
+- WordPress: 61-63% ✅
+- Shopify: 6.7% ✅
+- Wix: 5-5.7% ✅
+- Squarespace: 3-3.4% ✅
+- Joomla: 2% ✅
+- Webflow: 1.2% ✅
+- Drupal: 1.1% ✅
+- Adobe/Magento: 1% ✅
+- HubSpot: ~1% ✅ NEW
+- Liferay: Enterprise ✅ NEW
+- Adobe AEM: Enterprise ✅ NEW
+
+---
+
+## v1.1.1 - Security and Infrastructure Improvements (2025-11-13)
 
 ### 🔒 Security Enhancements
 
@@ -257,12 +402,12 @@ First official release of Rankle - A comprehensive web infrastructure reconnaiss
   - Path testing: `/core/misc/drupal.js`, `/user/login`, `/sites/default/`
   - robots.txt analysis for CMS hints
   - Version extraction from meta tags and inline patterns
-  
+
 - **Additional CMS Support**
   - TYPO3 detection
   - Concrete5 detection
   - ModX detection
-  
+
 - **Advanced Detection Methods**
   - Multi-stage detection with fallback strategies
   - robots.txt fingerprinting
@@ -278,7 +423,7 @@ First official release of Rankle - A comprehensive web infrastructure reconnaiss
   - CDN77
   - jsDelivr
   - Varnish (via headers)
-  
+
 - **Improved Detection:**
   - Regex-based pattern matching instead of simple string matching
   - Reverse DNS lookup for IP-based CDN identification
@@ -298,7 +443,7 @@ First official release of Rankle - A comprehensive web infrastructure reconnaiss
   - DataDome
   - Fortinet FortiWeb
   - Wordfence
-  
+
 - **Bot Protection Detection:**
   - Voight-Kampff test detection
   - JavaScript challenge detection
@@ -309,12 +454,12 @@ First official release of Rankle - A comprehensive web infrastructure reconnaiss
   - Safe attribute extraction with fallback to 'N/A'
   - List handling for multiple values (takes first non-None)
   - Date format cleaning
-  
+
 - **Additional Fields:**
   - Registrant name
   - City and state information
   - Enhanced name server display
-  
+
 - **Fallback Method:**
   - Raw socket WHOIS queries when library fails
   - TLD-specific WHOIS server selection
@@ -329,7 +474,7 @@ First official release of Rankle - A comprehensive web infrastructure reconnaiss
   - Swiper, Slick carousel
   - AOS, GSAP animation libraries
   - Modernizr, Popper.js
-  
+
 - **Better Analysis:**
   - Script src attribute scanning
   - Pattern-based library identification

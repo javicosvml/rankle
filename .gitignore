@@ -117,7 +117,6 @@ config.ini
 .credentials
 
 # Additional environment files
-.env.local
 .env.development
 .env.test
 .env.production

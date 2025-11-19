@@ -1,0 +1,95 @@
+# Rankle - Development Dependencies
+# Install: pip install -r requirements-dev.txt
+
+# Include production dependencies
+-r requirements.txt
+
+# ============================================================================
+# CODE QUALITY & FORMATTING
+# ============================================================================
+
+black>=23.11.0
+# Python code formatter
+# Enforces consistent code style
+# Usage: black rankle.py --line-length=120
+
+flake8>=6.1.0
+# Python linter for style guide enforcement
+# Checks code against PEP 8
+# Usage: flake8 rankle.py --max-line-length=120
+
+pylint>=3.0.0
+# Comprehensive Python linter
+# More strict than flake8
+# Usage: pylint rankle.py
+
+# ============================================================================
+# PRE-COMMIT HOOKS
+# ============================================================================
+
+pre-commit>=3.5.0
+# Git hook framework
+# Runs checks before each commit
+# Install: pre-commit install
+# Usage: pre-commit run --all-files
+
+# ============================================================================
+# TYPE CHECKING
+# ============================================================================
+
+mypy>=1.7.0
+# Static type checker for Python
+# Validates type hints
+# Usage: mypy rankle.py --ignore-missing-imports
+
+types-requests>=2.31.0
+# Type stubs for requests library
+# Required by mypy for type checking
+
+# ============================================================================
+# TESTING (Optional - for future tests)
+# ============================================================================
+
+pytest>=7.4.0
+# Testing framework
+# Usage: pytest tests/
+
+pytest-cov>=4.1.0
+# Code coverage plugin for pytest
+# Usage: pytest --cov=rankle tests/
+
+# ============================================================================
+# DOCUMENTATION (Optional)
+# ============================================================================
+
+pdoc3>=0.10.0
+# Auto-generate API documentation
+# Usage: pdoc --html --output-dir docs rankle.py
+
+sphinx>=7.2.0
+# Full documentation generator
+# Usage: sphinx-quickstart docs
+
+sphinx-rtd-theme>=2.0.0
+# Read the Docs theme for Sphinx
+# Professional documentation theme
+
+# ============================================================================
+# INSTALLATION INSTRUCTIONS
+# ============================================================================
+#
+# Install all development dependencies:
+#   pip install -r requirements-dev.txt
+#
+# This will install:
+#   - All production dependencies (from requirements.txt)
+#   - Code formatting tools (black, flake8, pylint)
+#   - Pre-commit hooks framework
+#   - Type checking tools (mypy)
+#   - Testing framework (pytest)
+#   - Documentation generators (pdoc3, sphinx)
+#
+# After installation, setup pre-commit:
+#   pre-commit install
+#
+# ============================================================================
