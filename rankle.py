@@ -21,10 +21,8 @@ import json
 import re
 import socket
 import ssl
-import os
 from datetime import datetime
 from urllib.parse import urlparse
-from typing import Dict, List, Optional, Any, Tuple
 
 try:
     import requests
@@ -45,50 +43,18 @@ except ImportError:
 class Rankle:
     """Web infrastructure reconnaissance tool"""
 
-    # Timeouts (seconds)
-    HTTP_TIMEOUT = 45
-    HTTP_TIMEOUT_SHORT = 15
-    DNS_TIMEOUT = 10
-    SSL_TIMEOUT = 5
-    WHOIS_TIMEOUT = 10
-
-    # HTTP Status Codes
-    HTTP_OK = 200
-    HTTP_MOVED_PERMANENTLY = 301
-    HTTP_FOUND = 302
-    HTTP_FORBIDDEN = 403
-    HTTP_NOT_FOUND = 404
-
-    # Common Ports
-    COMMON_WEB_PORTS = [80, 443, 8080, 8443]
-    COMMON_SERVICES_PORTS = [22, 21, 25, 3306, 5432]
-
-    # Retry Configuration
-    MAX_RETRIES = 3
-    RETRY_DELAY = 2
-
-    # Detection Thresholds
-    MIN_CMS_INDICATORS = 2
-    MIN_CMS_INDICATORS_NO_META = 3
-
-    # Subdomain Limits
-    MAX_SUBDOMAINS_DISPLAY = 50
-
-    def __init__(self, url: str) -> None:
+    def __init__(self, url):
         self.url = url
         self.domain = self._extract_domain(url)
         self.results = {}
         self.scan_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.session = self._create_session()
 
-        # Load technology signatures
-        self.tech_signatures = self._load_tech_signatures()
-
         # Validate domain
         if not self._validate_domain(self.domain):
             raise ValueError(f"Invalid domain format: {self.domain}")
 
-    def _extract_domain(self, url: str) -> str:
+    def _extract_domain(self, url):
         """Extract clean domain from URL"""
         if not url.startswith(("http://", "https://")):
             url = "https://" + url
@@ -98,47 +64,20 @@ class Rankle:
         domain = domain.split(":")[0]
         return domain
 
-    def _validate_domain(self, domain: str) -> bool:
+    def _validate_domain(self, domain):
         """Validate domain format"""
         pattern = r"^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$"
         return bool(re.match(pattern, domain))
 
-    def _load_tech_signatures(self) -> Dict[str, Any]:
-        """Load technology signatures from JSON file"""
-        try:
-            # Get the directory where rankle.py is located
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            signatures_path = os.path.join(script_dir, "tech_signatures.json")
-
-            if os.path.exists(signatures_path):
-                with open(signatures_path, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            else:
-                print("   ⚠️  Warning: tech_signatures.json not found, using basic detection")
-                return {"technologies": {}}
-        except Exception as e:
-            print(f"   ⚠️  Warning: Could not load tech_signatures.json: {e}")
-            return {"technologies": {}}
-
-    def _create_session(self) -> requests.Session:
+    def _create_session(self):
         """Create requests session with realistic headers"""
         session = requests.Session()
-
-        # Check if brotli is available
-        try:
-            import brotli  # noqa: F401
-
-            accept_encoding = "gzip, deflate, br"
-        except ImportError:
-            # Brotli not available, exclude it to avoid decompression issues
-            accept_encoding = "gzip, deflate"
-
         session.headers.update(
             {
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
                 "Accept-Language": "en-US,en;q=0.5",
-                "Accept-Encoding": accept_encoding,
+                "Accept-Encoding": "gzip, deflate, br",
                 "DNT": "1",
                 "Connection": "keep-alive",
                 "Upgrade-Insecure-Requests": "1",
@@ -146,12 +85,12 @@ class Rankle:
         )
         return session
 
-    def analyze_http_headers(self) -> Optional[Tuple[Dict[str, Any], requests.Response]]:
+    def analyze_http_headers(self):
         """Analyze HTTP headers and detect technologies from headers"""
         print("🌐 Analyzing HTTP Headers and Technologies...")
 
         try:
-            response = self.session.get(f"https://{self.domain}", timeout=self.HTTP_TIMEOUT, allow_redirects=True)
+            response = self.session.get(f"https://{self.domain}", timeout=45, allow_redirects=True)
 
             headers = {k.lower(): v for k, v in response.headers.items()}
 
@@ -231,7 +170,7 @@ class Rankle:
                                 origin_ips.add(ip)
                                 origin_hostnames.add(subdomain)
                                 methods_found.append("subdomain_scan")
-                except Exception:
+                except:
                     pass
 
         # Method 2: MX records (mail servers often reveal origin network)
@@ -256,11 +195,11 @@ class Rankle:
                                 geo = requests.get(f"https://ipapi.co/{ip}/json/", timeout=5).json()
                                 if "org" in geo:
                                     print(f"      • MX IP: {ip} ({geo.get('org', 'Unknown')})")
-                            except Exception:
+                            except:
                                 pass
-                    except Exception:
+                    except:
                         pass
-            except Exception:
+            except:
                 pass
 
         # Method 3: TXT/SPF records may reveal origin IPs
@@ -295,7 +234,7 @@ class Rankle:
                             origin_ips.add(ip)
                             origin_hostnames.add(san)
                             methods_found.append("ssl_san")
-                    except Exception:
+                    except:
                         pass
 
         # Method 5: Check for common bypasses (www vs non-www, different protocols)
@@ -319,7 +258,7 @@ class Rankle:
                         origin_hostnames.add(test_domain)
                         methods_found.append("pattern_discovery")
                         print(f"      • Found: {test_domain} → {ip}")
-            except Exception:
+            except:
                 pass
 
         # Analyze origin IPs to detect hosting
@@ -334,7 +273,7 @@ class Rankle:
                             {"ip": ip, "provider": provider, "confidence": confidence, "hostname": hostname}
                         )
                         print(f"      • {ip} → {provider} ({confidence} confidence)")
-                except Exception:
+                except:
                     print(f"      • {ip}")
 
         # Store results
@@ -353,7 +292,7 @@ class Rankle:
 
         return origin_info
 
-    def enumerate_subdomains_crtsh(self) -> List[str]:
+    def enumerate_subdomains_crtsh(self):
         """
         Enumerate subdomains using Certificate Transparency logs
         Queries crt.sh without requiring API keys - 100% passive
@@ -365,7 +304,7 @@ class Rankle:
 
         try:
             response = requests.get(url, timeout=30)
-            if response.status_code == self.HTTP_OK:
+            if response.status_code == 200:
                 data = response.json()
                 for entry in data:
                     name = entry.get("name_value", "")
@@ -394,7 +333,7 @@ class Rankle:
             print(f"   └─ Error: {str(e)}")
             return []
 
-    def analyze_dns(self) -> Dict[str, List[str]]:
+    def analyze_dns(self):
         """
         Comprehensive DNS enumeration using dnspython
         No external dependencies required
@@ -441,13 +380,13 @@ class Rankle:
             except dns.exception.Timeout:
                 dns_records[record_type] = []
                 print(f"   └─ {description}: Timeout")
-            except Exception:
+            except Exception as e:
                 dns_records[record_type] = []
 
         self.results["dns"] = dns_records
         return dns_records
 
-    def analyze_tls_certificate(self) -> Optional[Dict[str, Any]]:
+    def analyze_tls_certificate(self):
         """
         Analyze TLS/SSL certificate using Python's ssl module
         No external tools required - pure Python
@@ -492,7 +431,7 @@ class Rankle:
             return tls_info
 
         except socket.timeout:
-            print("   └─ Connection timeout")
+            print(f"   └─ Connection timeout")
             return None
         except ssl.SSLError as e:
             print(f"   └─ SSL Error: {str(e)}")
@@ -533,7 +472,7 @@ class Rankle:
                     resp = self.session.request(method, f"https://{self.domain}", timeout=5)
                     if resp.status_code not in [405, 501]:
                         allowed_methods.append(method)
-                except Exception:
+                except:
                     pass
 
             if allowed_methods:
@@ -543,6 +482,7 @@ class Rankle:
             # 2. Server Signature Analysis
             print("   └─ Analyzing server signature...")
             server_header = response.headers.get("Server", "")
+            x_powered_by = response.headers.get("X-Powered-By", "")
 
             # Extract version numbers from Server header
             version_patterns = {
@@ -601,7 +541,7 @@ class Rankle:
                             }
                         )
                         print(f"      • Found: {endpoint} [{resp.status_code}]")
-                except Exception:
+                except:
                     pass
 
             fingerprint_results["api_endpoints"] = found_endpoints
@@ -629,10 +569,10 @@ class Rankle:
                 try:
                     test_url = f"https://{self.domain}{file_path}"
                     resp = self.session.head(test_url, timeout=3)
-                    if resp.status_code == self.HTTP_OK:
+                    if resp.status_code == 200:
                         exposed.append(file_path)
                         print(f"      ⚠️  Exposed: {file_path}")
-                except Exception:
+                except:
                     pass
 
             fingerprint_results["exposed_files"] = exposed
@@ -702,7 +642,7 @@ class Rankle:
                             if tech not in fingerprint_results["error_page_tech"]:
                                 fingerprint_results["error_page_tech"].append(tech)
                                 print(f"      • Error page reveals: {tech}")
-                except Exception:
+                except:
                     pass
 
             # 7. Technology-Specific Headers
@@ -740,7 +680,7 @@ class Rankle:
                 response_time = (time.time() - start) * 1000
                 fingerprint_results["response_time_ms"] = round(response_time, 2)
                 print(f"      • Response time: {response_time:.2f}ms")
-            except Exception:
+            except:
                 pass
 
             # Store results
@@ -752,222 +692,7 @@ class Rankle:
             print(f"   └─ Error during fingerprinting: {str(e)}")
             return fingerprint_results
 
-    def detect_technologies_enhanced(self, response: Optional[requests.Response] = None) -> Optional[Dict[str, Any]]:
-        """
-        Enhanced technology detection with confidence scoring and version detection
-        Uses signature-based detection from tech_signatures.json
-        """
-        print("\n🔧 Detecting Web Technologies (Enhanced)...")
-
-        try:
-            if response is None:
-                response = self.session.get(f"https://{self.domain}", timeout=self.HTTP_TIMEOUT)
-
-            html = response.text
-            soup = BeautifulSoup(html, "html.parser")
-            html_lower = html.lower()
-
-            detected_technologies = {}
-
-            # Iterate through all technology signatures
-            for tech_name, tech_data in self.tech_signatures.get("technologies", {}).items():
-                result = self._detect_technology_with_confidence(tech_name, tech_data, response, html, html_lower, soup)
-
-                if result:
-                    detected_technologies[tech_name] = result
-
-            # Categorize technologies
-            categorized = self._categorize_technologies(detected_technologies)
-
-            # Display results with confidence scores
-            self._display_enhanced_results(categorized)
-
-            # Store in results
-            self.results["technologies_enhanced"] = {
-                "detected": detected_technologies,
-                "categorized": categorized,
-                "total_count": len(detected_technologies),
-            }
-
-            return self.results["technologies_enhanced"]
-
-        except Exception as e:
-            print(f"   └─ Error: {str(e)}")
-            return None
-
-    def _detect_technology_with_confidence(
-        self,
-        tech_name: str,
-        tech_data: Dict[str, Any],
-        response: requests.Response,
-        html: str,
-        html_lower: str,
-        soup: BeautifulSoup,
-    ) -> Optional[Dict[str, Any]]:
-        """
-        Detect a specific technology with confidence scoring
-        Returns: {"confidence": 0.85, "version": "1.2.3", "indicators": [...]}
-        """
-        confidence_score = 0.0
-        indicators_found = []
-        version = None
-
-        patterns = tech_data.get("patterns", {})
-        weights = tech_data.get("confidence_weights", {})
-
-        # Check HTML patterns
-        if "html" in patterns:
-            for pattern in patterns["html"]:
-                if re.search(pattern, html_lower):
-                    confidence_score += weights.get("pattern", 0.2)
-                    indicators_found.append(f"HTML pattern: {pattern[:50]}")
-
-        # Check HTTP headers
-        if "headers" in patterns:
-            for header_name, header_values in patterns["headers"].items():
-                header_value = response.headers.get(header_name, "")
-                if header_value:
-                    # If header_values is empty list, just presence is enough
-                    if not header_values or any(val.lower() in header_value.lower() for val in header_values):
-                        confidence_score += weights.get("header", 0.4)
-                        indicators_found.append(f"Header: {header_name}")
-
-        # Check cookies
-        if "cookies" in patterns:
-            for cookie_pattern in patterns["cookies"]:
-                for cookie_name in response.cookies.keys():
-                    if cookie_pattern.lower() in cookie_name.lower():
-                        confidence_score += weights.get("cookie", 0.3)
-                        indicators_found.append(f"Cookie: {cookie_name}")
-                        break
-
-        # Check meta tags
-        if "meta" in patterns:
-            meta_generator = soup.find("meta", attrs={"name": "generator"})
-            if meta_generator:
-                content = meta_generator.get("content", "").lower()
-                for meta_pattern in patterns["meta"]:
-                    if meta_pattern.lower() in content:
-                        confidence_score += weights.get("meta", 0.4)
-                        indicators_found.append(f"Meta generator: {content}")
-
-        # Check JavaScript globals
-        if "js_globals" in patterns:
-            for js_global in patterns["js_globals"]:
-                # Look for window.X or just X in inline scripts
-                if re.search(
-                    rf"\bwindow\.{re.escape(js_global)}\b|\b{re.escape(js_global)}\s*[=:]",
-                    html,
-                ):
-                    confidence_score += weights.get("js_global", 0.3)
-                    indicators_found.append(f"JS Global: {js_global}")
-
-        # Detect version if confidence is high enough
-        if confidence_score >= 0.3:
-            version = self._detect_version(tech_name, tech_data, html, response)
-
-        # Return result if confidence threshold met
-        if confidence_score >= 0.3:  # Minimum confidence threshold
-            return {
-                "confidence": min(confidence_score, 1.0),  # Cap at 1.0
-                "version": version,
-                "indicators": indicators_found[:5],  # Limit to 5 indicators
-                "category": tech_data.get("category", "Unknown"),
-            }
-
-        return None
-
-    def _detect_version(
-        self,
-        tech_name: str,
-        tech_data: Dict[str, Any],
-        html: str,
-        response: requests.Response,
-    ) -> Optional[str]:
-        """Detect version of a technology"""
-        version_patterns = tech_data.get("version_patterns", [])
-
-        # Check HTML content
-        for pattern in version_patterns:
-            match = re.search(pattern, html, re.IGNORECASE)
-            if match:
-                return match.group(1)
-
-        # Check headers
-        for header_name, header_value in response.headers.items():
-            for pattern in version_patterns:
-                match = re.search(pattern, header_value, re.IGNORECASE)
-                if match:
-                    return match.group(1)
-
-        return None
-
-    def _categorize_technologies(self, detected: Dict[str, Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
-        """Categorize detected technologies"""
-        categorized = {}
-
-        for tech_name, tech_info in detected.items():
-            category = tech_info.get("category", "Unknown")
-            if category not in categorized:
-                categorized[category] = []
-
-            categorized[category].append(
-                {
-                    "name": tech_name,
-                    "confidence": tech_info["confidence"],
-                    "version": tech_info.get("version"),
-                }
-            )
-
-        # Sort by confidence within each category
-        for category in categorized:
-            categorized[category].sort(key=lambda x: x["confidence"], reverse=True)
-
-        return categorized
-
-    def _display_enhanced_results(self, categorized: Dict[str, List[Dict[str, Any]]]):
-        """Display enhanced detection results"""
-        if not categorized:
-            print("   └─ No technologies detected with sufficient confidence")
-            return
-
-        # Sort categories by priority
-        category_order = [
-            "CMS",
-            "E-commerce",
-            "Portal",
-            "JavaScript Framework",
-            "JavaScript Library",
-            "CSS Framework",
-            "Web Server",
-            "Programming Language",
-            "Analytics",
-            "CDN",
-            "Unknown",
-        ]
-
-        for category in category_order:
-            if category not in categorized:
-                continue
-
-            techs = categorized[category]
-            print(f"\n   📦 {category}:")
-
-            for tech in techs[:5]:  # Show top 5 per category
-                confidence_pct = int(tech["confidence"] * 100)
-                version_str = f" v{tech['version']}" if tech["version"] else ""
-
-                # Confidence indicator
-                if confidence_pct >= 80:
-                    indicator = "🟢"
-                elif confidence_pct >= 50:
-                    indicator = "🟡"
-                else:
-                    indicator = "🟠"
-
-                print(f"      {indicator} {tech['name']}{version_str} (confidence: {confidence_pct}%)")
-
-    def detect_technologies(self, response: Optional[requests.Response] = None) -> Optional[Dict[str, Any]]:
+    def detect_technologies(self, response=None):
         """
         Detect web technologies including CMS, frameworks, and libraries
         Analyzes HTML content and performs fingerprinting
@@ -976,7 +701,7 @@ class Rankle:
 
         try:
             if response is None:
-                response = self.session.get(f"https://{self.domain}", timeout=self.HTTP_TIMEOUT)
+                response = self.session.get(f"https://{self.domain}", timeout=60)
 
             html = response.text
             soup = BeautifulSoup(html, "html.parser")
@@ -1032,26 +757,23 @@ class Rankle:
         # Check robots.txt for CMS hints
         try:
             robots_response = self.session.get(f"https://{self.domain}/robots.txt", timeout=5)
-            if robots_response.status_code == self.HTTP_OK:
+            if robots_response.status_code == 200:
                 robots_text = robots_response.text.lower()
 
                 if any(
                     indicator in robots_text for indicator in ["/core/", "/sites/", "drupal", "/user/", "/admin/?q="]
                 ):
-                    print("   └─ CMS Detection: Found Drupal hints in robots.txt")
+                    print(f"   └─ CMS Detection: Found Drupal hints in robots.txt")
                     return "Drupal"
                 elif any(indicator in robots_text for indicator in ["/wp-admin", "/wp-content", "/wp-includes"]):
                     return "WordPress"
                 elif any(indicator in robots_text for indicator in ["/administrator/", "/components/"]):
                     return "Joomla"
-        except Exception:
+        except:
             pass
 
         # Check specific URLs that CMSs typically have
         common_paths = {
-            "HubSpot CMS": ["/hubfs/", "/_hcms/api/", "/hs/hsstatic/"],
-            "Liferay": ["/c/portal/layout", "/web/guest", "/group/guest", "/api/jsonws"],
-            "Adobe AEM": ["/content/dam", "/etc.clientlibs", "/libs/granite/core/content/login.html"],
             "Drupal": [
                 "/core/misc/drupal.js",
                 "/sites/default/files/",
@@ -1070,23 +792,14 @@ class Rankle:
                 try:
                     test_url = f"https://{self.domain}{path}"
                     test_response = self.session.head(test_url, timeout=5, allow_redirects=False)
-                    # Only accept 200 (exists) or 403 (forbidden but exists)
-                    # Exclude 301/302 as they indicate redirects, not actual CMS paths
-                    if test_response.status_code in [self.HTTP_OK, self.HTTP_FORBIDDEN]:
+                    # If we get 200, 301, 302, 403 (forbidden but exists), it's likely there
+                    if test_response.status_code in [200, 301, 302, 403]:
                         print(f"   └─ CMS Detection: Found {cms_name} path: {path}")
                         return cms_name
-                except Exception:
+                except:
                     pass
 
-        # Check for specific HTML/CSS classes and IDs with priority order
-        # Check Liferay first (more specific)
-        if soup.find(attrs={"class": re.compile(r"lfr-|liferay")}):
-            return "Liferay"
-
-        if soup.find(attrs={"id": re.compile(r"liferay|lfr")}):
-            return "Liferay"
-
-        # Check Drupal
+        # Check for specific HTML/CSS classes and IDs
         if soup.find(attrs={"class": re.compile(r"drupal|views-|block-|node-|page-node")}):
             return "Drupal"
 
@@ -1141,35 +854,6 @@ class Rankle:
         """Detect Content Management System from HTML"""
         cms_patterns = {
             "WordPress": [r"wp-content", r"wp-includes", r"/wp-json/", r"wp-emoji"],
-            "HubSpot CMS": [
-                r"/hubfs/",
-                r"cdn2\.hubspot\.net",
-                r"hsforms\.net",
-                r"hs-sites\.com",
-                r"hs-scripts\.com",
-                r"hs-analytics\.net",
-                r'name="generator" content="hubspot"',
-                r"hubspot\.com/api/",
-            ],
-            "Liferay": [
-                r"liferay",
-                r"window\.liferay",
-                r"liferay\.icons",
-                r"@clayui/",
-                r"__liferay__",
-                r"lfr-css-file",
-                r"liferay-ui",
-                r"lfrportlet",
-            ],
-            "Adobe AEM": [
-                r"/etc\.clientlibs/",
-                r"/content/dam/",
-                r"data-cmp-",
-                r"/etc/designs/",
-                r"granite/",
-                r"cq:",
-                r"clientlib-",
-            ],
             "Drupal": [
                 r"drupal",
                 r"sites/default",
@@ -1202,68 +886,16 @@ class Rankle:
             "ModX": [r"modx"],
         }
 
-        # Define priority order for CMS detection to avoid false positives
-        # More specific CMS should be checked first
-        priority_cms = ["HubSpot CMS", "Liferay", "Adobe AEM", "WordPress"]
+        for cms_name, patterns in cms_patterns.items():
+            if any(re.search(pattern, html_lower) for pattern in patterns):
+                # Try to detect version
+                version = None
 
-        # Check priority CMS first
-        for cms_name in priority_cms:
-            if cms_name not in cms_patterns:
-                continue
-
-            patterns = cms_patterns[cms_name]
-
-            # Special handling for WordPress to avoid false positives from external domains
-            if cms_name == "WordPress":
-                if self._is_wordpress_site(html_lower, soup):
+                if cms_name == "WordPress":
                     meta = soup.find("meta", attrs={"name": "generator"})
                     if meta and "wordpress" in meta.get("content", "").lower():
-                        return meta.get("content")
-                    return "WordPress"
-                continue
-
-            # Check HubSpot CMS with high confidence
-            if cms_name == "HubSpot CMS":
-                matches = sum(1 for pattern in patterns if re.search(pattern, html_lower))
-                # Need at least 2 HubSpot indicators for positive detection
-                if matches >= 2:
-                    # Check meta generator for confirmation
-                    meta = soup.find("meta", attrs={"name": "generator"})
-                    if meta and "hubspot" in meta.get("content", "").lower():
-                        return "HubSpot CMS"
-                    # Even without meta, if we have strong indicators
-                    if matches >= 3:
-                        return "HubSpot CMS"
-                continue
-
-            # Check Liferay with high confidence (multiple indicators)
-            if cms_name == "Liferay":
-                matches = sum(1 for pattern in patterns if re.search(pattern, html_lower))
-                # Need at least 2 Liferay indicators for positive detection
-                if matches >= 2:
-                    # Try to detect version
-                    version_match = re.search(r"liferay[.\s]+(?:portal[.\s]+)?(\d+(?:\.\d+)*)", html_lower)
-                    if version_match:
-                        return f"Liferay {version_match.group(1)}"
-                    return "Liferay"
-                continue
-
-            # Check Adobe AEM with high confidence
-            if cms_name == "Adobe AEM":
-                matches = sum(1 for pattern in patterns if re.search(pattern, html_lower))
-                # Need at least 2 AEM indicators for positive detection
-                if matches >= 2:
-                    return "Adobe AEM"
-                continue
-
-        # Check remaining CMS
-        for cms_name, patterns in cms_patterns.items():
-            if cms_name in priority_cms:
-                continue
-
-            if any(re.search(pattern, html_lower) for pattern in patterns):
-                # Try to detect version (unused for now)
-                # version = None
+                        version = meta.get("content")
+                        return version
 
                 if cms_name == "Drupal":
                     # Try to get Drupal version
@@ -1279,45 +911,6 @@ class Rankle:
                 return cms_name
 
         return "Unknown"
-
-    def _is_wordpress_site(self, html_lower, soup):
-        """
-        Validate if site is actually WordPress by checking for local references
-        Avoids false positives from external domain references (e.g., favicons)
-        """
-        # Check meta generator first (most reliable)
-        meta = soup.find("meta", attrs={"name": "generator"})
-        if meta and "wordpress" in meta.get("content", "").lower():
-            return True
-
-        # Check for WordPress-specific tags/attributes in HTML structure
-        if soup.find(attrs={"class": re.compile(r"wp-|wordpress")}):
-            return True
-
-        # Look for local WordPress paths (starting with / or relative)
-        # Exclude external domain references
-        wp_local_patterns = [
-            r'["\']\/wp-content\/',
-            r'["\']\/wp-includes\/',
-            r'["\']\/wp-json\/',
-            r'href=["\']\/wp-',
-            r'src=["\']\/wp-',
-            r"wp-embed\.min\.js",
-            r"wp-emoji-release\.min\.js",
-        ]
-
-        for pattern in wp_local_patterns:
-            if re.search(pattern, html_lower):
-                # Found local WordPress reference
-                return True
-
-        # Check if domain-relative WordPress paths exist (without http/https)
-        # This catches things like "//domain.com/wp-content"
-        domain_pattern = rf"\/\/{re.escape(self.domain)}\/wp-"
-        if re.search(domain_pattern, html_lower):
-            return True
-
-        return False
 
     def _detect_js_frameworks(self, html_lower):
         """Detect JavaScript frameworks"""
@@ -1386,9 +979,7 @@ class Rankle:
 
         return cdns
 
-    def detect_cdn_waf(
-        self, headers: Dict[str, str], cnames: Optional[List[str]] = None
-    ) -> Tuple[Optional[str], Optional[str]]:
+    def detect_cdn_waf(self, headers, cnames=None):
         """Detect CDN and Web Application Firewall"""
         print("\n🚀 Detecting CDN and WAF...")
 
@@ -1418,7 +1009,7 @@ class Rankle:
             "Sucuri WAF": ["sucuri", "cloudproxy"],
             "Incapsula/Imperva": ["incapsula", "visid_incap", "imperva"],
             "ModSecurity": ["mod_security", "modsecurity"],
-            "AWS WAF": ["x-amzn-waf", "x-amzn-requestid", "awselb"],
+            "AWS WAF": ["x-amzn-waf", "x-amzn-requestid", "awselb", "x-amzn-trace-id", "x-amz-apigw"],
             "Barracuda": ["barracuda", "barra"],
             "F5 BIG-IP ASM": ["bigip", "f5", "f5-trace"],
             "Fortinet FortiWeb": ["fortiweb", "fortigate"],
@@ -1435,6 +1026,7 @@ class Rankle:
 
         detected_cdns = []
         detected_wafs = []
+        detection_methods = []
 
         # Search in headers
         headers_str = " ".join([f"{k}:{v}" for k, v in headers.items()]).lower()
@@ -1448,6 +1040,7 @@ class Rankle:
             if any(re.search(indicator, headers_str) for indicator in indicators):
                 if waf_name not in detected_wafs:
                     detected_wafs.append(waf_name)
+                    detection_methods.append(f"{waf_name} (header signature)")
 
         # Search in CNAMEs if provided
         if cnames:
@@ -1465,16 +1058,137 @@ class Rankle:
             if cdn_from_ip and cdn_from_ip not in detected_cdns:
                 detected_cdns.append(cdn_from_ip)
 
+        # Active WAF detection with test payloads
+        active_waf = self._active_waf_detection()
+        if active_waf and active_waf not in detected_wafs:
+            detected_wafs.append(active_waf["name"])
+            detection_methods.append(f"{active_waf['name']} (active detection: {active_waf['method']})")
+
         cdn_result = ", ".join(detected_cdns) if detected_cdns else "Not detected"
         waf_result = ", ".join(detected_wafs) if detected_wafs else "Not detected"
 
         print(f"   └─ CDN: {cdn_result}")
         print(f"   └─ WAF: {waf_result}")
+        if detection_methods:
+            for method in detection_methods:
+                print(f"      • {method}")
 
         self.results["cdn"] = cdn_result
         self.results["waf"] = waf_result
+        self.results["waf_detection_methods"] = detection_methods
 
         return cdn_result, waf_result
+
+    def _active_waf_detection(self):
+        """
+        Active WAF detection using test payloads
+        ETHICAL: Only uses non-intrusive detection payloads
+        """
+        print("   └─ Running active WAF detection tests...")
+
+        # Test payloads that trigger WAF responses
+        test_payloads = [
+            {
+                "name": "XSS Detection",
+                "param": "?test=<script>alert(1)</script>",
+                "expected_blocks": ["AWS WAF", "Cloudflare WAF", "ModSecurity"],
+            },
+            {
+                "name": "SQL Injection Detection",
+                "param": "?id=1' OR '1'='1",
+                "expected_blocks": ["AWS WAF", "Cloudflare WAF", "ModSecurity"],
+            },
+            {
+                "name": "Path Traversal Detection",
+                "param": "?file=../../../etc/passwd",
+                "expected_blocks": ["AWS WAF", "Cloudflare WAF"],
+            },
+            {
+                "name": "Command Injection Detection",
+                "param": "?cmd=|cat /etc/passwd",
+                "expected_blocks": ["AWS WAF", "ModSecurity"],
+            },
+        ]
+
+        # Get baseline response
+        try:
+            baseline = self.session.get(f"https://{self.domain}", timeout=10, allow_redirects=False)
+            baseline_status = baseline.status_code
+            baseline_headers = {k.lower(): v for k, v in baseline.headers.items()}
+        except Exception as e:
+            print(f"      • Baseline request failed: {str(e)}")
+            return None
+
+        # Test each payload
+        for payload_test in test_payloads[:2]:  # Limit to first 2 tests
+            try:
+                test_url = f"https://{self.domain}/{payload_test['param']}"
+                response = self.session.get(test_url, timeout=10, allow_redirects=False)
+
+                # Check for WAF indicators
+                status = response.status_code
+                resp_headers = {k.lower(): v for k, v in response.headers.items()}
+                resp_text = response.text.lower() if len(response.text) < 10000 else ""
+
+                # AWS WAF specific indicators
+                aws_waf_indicators = [
+                    status == 403,  # Common block status
+                    status == 405,
+                    "x-amzn-requestid" in resp_headers,
+                    "x-amzn-errortype" in resp_headers,
+                    "x-amz-apigw-id" in resp_headers,
+                    "awselb" in str(resp_headers),
+                    "x-amzn-trace-id" in resp_headers,
+                    "request blocked" in resp_text,
+                    "aws waf" in resp_text,
+                    "access denied" in resp_text and "cloudfront" in str(resp_headers),
+                ]
+
+                if sum(aws_waf_indicators) >= 2:
+                    print(f"      ✓ AWS WAF detected via {payload_test['name']}")
+                    return {
+                        "name": "AWS WAF",
+                        "method": payload_test["name"],
+                        "status": status,
+                        "confidence": "high" if sum(aws_waf_indicators) >= 3 else "medium",
+                    }
+
+                # Cloudflare WAF indicators
+                if status == 403 and any(k.startswith("cf-") for k in resp_headers.keys()):
+                    print(f"      ✓ Cloudflare WAF detected via {payload_test['name']}")
+                    return {
+                        "name": "Cloudflare WAF",
+                        "method": payload_test["name"],
+                        "status": status,
+                        "confidence": "high",
+                    }
+
+                # Generic WAF detection
+                if status in [403, 406, 419, 429, 501] and status != baseline_status:
+                    # Check response body for WAF signatures
+                    waf_signatures = {
+                        "AWS WAF": ["aws", "cloudfront", "access denied", "forbidden"],
+                        "ModSecurity": ["mod_security", "modsecurity", "not acceptable"],
+                        "Generic WAF": ["web application firewall", "security policy", "request blocked"],
+                    }
+
+                    for waf_name, signatures in waf_signatures.items():
+                        if any(sig in resp_text for sig in signatures):
+                            print(f"      ✓ {waf_name} detected via {payload_test['name']}")
+                            return {
+                                "name": waf_name,
+                                "method": payload_test["name"],
+                                "status": status,
+                                "confidence": "medium",
+                            }
+
+            except requests.exceptions.RequestException:
+                pass
+            except Exception as e:
+                print(f"      • Test failed: {str(e)}")
+
+        print("      • No WAF detected via active testing")
+        return None
 
     def _detect_cdn_by_ip(self, ip):
         """Try to detect CDN by IP address using reverse DNS"""
@@ -1497,7 +1211,7 @@ class Rankle:
             for domain, cdn_name in cdn_domains.items():
                 if domain in hostname:
                     return cdn_name
-        except Exception:
+        except:
             pass
 
         return None
@@ -1601,7 +1315,7 @@ class Rankle:
         if not hostname:
             try:
                 hostname = socket.gethostbyaddr(ip)[0].lower()
-            except Exception:
+            except:
                 hostname = ""
 
         # Get ISP from geolocation if available
@@ -1703,7 +1417,7 @@ class Rankle:
             print(f"   └─ Error: {str(e)}")
             return None
 
-    def whois_lookup(self) -> Dict[str, str]:
+    def whois_lookup(self):
         """
         WHOIS lookup for domain information
         Requires python-whois library (optional)
@@ -1801,7 +1515,7 @@ class Rankle:
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 s.settimeout(10)
                 s.connect((whois_server, 43))
-            except Exception:
+            except:
                 whois_server = "whois.iana.org"
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 s.settimeout(10)
@@ -1840,10 +1554,10 @@ class Rankle:
         except Exception as e:
             print(f"   └─ Alternative method failed: {str(e)}")
 
-    def analyze(self) -> None:
+    def analyze(self):
         """Execute complete reconnaissance analysis"""
         print("=" * 80)
-        print("🃏 RANKLE - Web Infrastructure Reconnaissance")
+        print(f"🃏 RANKLE - Web Infrastructure Reconnaissance")
         print("=" * 80)
         print(f"🎯 Target: {self.domain}")
         print(f"⏰ Timestamp: {self.scan_timestamp}")
@@ -1858,10 +1572,6 @@ class Rankle:
 
         self.analyze_tls_certificate()
 
-        # Use enhanced technology detection
-        self.detect_technologies_enhanced(response)
-
-        # Keep legacy detection for backward compatibility
         self.detect_technologies(response)
 
         # Advanced fingerprinting
@@ -1891,12 +1601,12 @@ class Rankle:
 
     def print_summary_report(self):
         """Print comprehensive summary report"""
-        print(f"\n{'=' * 80}")
+        print(f"\n{'='*80}")
         print("📊 RECONNAISSANCE SUMMARY REPORT")
-        print("=" * 80)
+        print(f"{'='*80}")
         print(f"🎯 Domain: {self.domain}")
         print(f"⏰ Scan Time: {self.scan_timestamp}")
-        print("=" * 80 + "\n")
+        print(f"{'='*80}\n")
 
         # Section 1: Basic Information
         print("═" * 80)
@@ -1918,32 +1628,6 @@ class Rankle:
         print("🔧 TECHNOLOGY STACK")
         print("═" * 80)
 
-        # Enhanced Technology Detection Results
-        if "technologies_enhanced" in self.results:
-            enhanced = self.results["technologies_enhanced"]
-            categorized = enhanced.get("categorized", {})
-
-            if categorized:
-                print("\n  🔬 Enhanced Detection Results:")
-                for category, techs in categorized.items():
-                    print(f"\n    {category}:")
-                    for tech in techs[:5]:
-                        confidence_pct = int(tech["confidence"] * 100)
-                        version_str = f" v{tech['version']}" if tech["version"] else ""
-
-                        # Confidence indicator
-                        if confidence_pct >= 80:
-                            indicator = "🟢"
-                        elif confidence_pct >= 50:
-                            indicator = "🟡"
-                        else:
-                            indicator = "🟠"
-
-                        print(f"      {indicator} {tech['name']}{version_str} ({confidence_pct}%)")
-
-            print("")  # Add spacing
-
-        # Legacy detection results (backward compatibility)
         if "technologies_web" in self.results:
             tech = self.results["technologies_web"]
             print(f"  CMS:               {tech.get('cms', 'Unknown')}")
@@ -1958,7 +1642,7 @@ class Rankle:
                 print(f"  CDN/Libraries:     {', '.join(tech['cdn'][:3])}")
 
         if "technologies" in self.results:
-            print("\n  Server Technologies:")
+            print(f"\n  Server Technologies:")
             for tech in self.results["technologies"]:
                 print(f"    • {tech}")
 
@@ -1970,20 +1654,20 @@ class Rankle:
         if "tls" in self.results:
             tls = self.results["tls"]
             issuer = tls.get("issuer", {}).get("organizationName", "N/A")
-            print("  TLS/SSL:")
+            print(f"  TLS/SSL:")
             print(f"    • Issuer:        {issuer}")
             print(f"    • Valid Until:   {tls.get('valid_until', 'N/A')}")
             print(f"    • TLS Version:   {tls.get('tls_version', 'N/A')}")
 
         if "security_headers" in self.results and self.results["security_headers"]:
-            print("\n  Security Headers:")
+            print(f"\n  Security Headers:")
             for header, value in self.results["security_headers"].items():
                 value_short = value[:60] + "..." if len(value) > 60 else value
                 print(f"    • {header}: {value_short}")
         else:
-            print("\n  ⚠️  Security Headers: Not detected (Potential risk)")
+            print(f"\n  ⚠️  Security Headers: Not detected (Potential risk)")
 
-        print("\n  CDN/WAF Protection:")
+        print(f"\n  CDN/WAF Protection:")
         print(f"    • CDN:           {self.results.get('cdn', 'Not detected')}")
         print(f"    • WAF:           {self.results.get('waf', 'Not detected')}")
 
@@ -1996,12 +1680,12 @@ class Rankle:
             dns = self.results["dns"]
 
             if dns.get("NS"):
-                print("  Name Servers:")
+                print(f"  Name Servers:")
                 for ns in dns["NS"][:5]:
                     print(f"    • {ns}")
 
             if dns.get("MX"):
-                print("\n  Mail Servers:")
+                print(f"\n  Mail Servers:")
                 for mx in dns["MX"][:3]:
                     print(f"    • {mx}")
 
@@ -2014,7 +1698,7 @@ class Rankle:
             print("🔍 SUBDOMAIN ENUMERATION")
             print("═" * 80)
             print(f"  Total Found: {len(self.results['subdomains'])}")
-            print("\n  Subdomains (first 15):")
+            print(f"\n  Subdomains (first 15):")
             for subdomain in self.results["subdomains"][:15]:
                 print(f"    • {subdomain}")
             if len(self.results["subdomains"]) > 15:
@@ -2037,7 +1721,7 @@ class Rankle:
                 print("═" * 80)
 
                 if fp.get("server_fingerprint"):
-                    print("  Server Versions:")
+                    print(f"  Server Versions:")
                     for tech, version in fp["server_fingerprint"].items():
                         print(f"    • {tech}: {version}")
 
@@ -2055,12 +1739,12 @@ class Rankle:
                         print(f"    • {file}")
 
                 if fp.get("detected_from_cookies"):
-                    print("\n  Technology from Cookies:")
+                    print(f"\n  Technology from Cookies:")
                     for tech in set(fp["detected_from_cookies"]):
                         print(f"    • {tech}")
 
                 if fp.get("error_page_tech"):
-                    print("\n  Error Page Analysis:")
+                    print(f"\n  Error Page Analysis:")
                     for tech in fp["error_page_tech"]:
                         print(f"    • {tech}")
 
@@ -2104,7 +1788,7 @@ class Rankle:
             print(f"  Origin IPs Found:  {len(origin.get('origin_ips', []))}")
 
             if origin.get("origin_providers"):
-                print("\n  Origin Hosting:")
+                print(f"\n  Origin Hosting:")
                 for provider_info in origin["origin_providers"][:5]:
                     print(
                         f"    • {provider_info['ip']} → {provider_info['provider']} ({provider_info['confidence']} confidence)"
@@ -2119,7 +1803,7 @@ class Rankle:
         print("✅ Report completed")
         print(f"{'═' * 80}\n")
 
-    def save_json(self, filename: Optional[str] = None) -> None:
+    def save_json(self, filename=None):
         """Save results to JSON file"""
         import os
 
@@ -2136,7 +1820,7 @@ class Rankle:
         print(f"💾 Results saved to: {filename}")
         return filename
 
-    def save_text_report(self, filename: Optional[str] = None) -> None:
+    def save_text_report(self, filename=None):
         """Save technical text report without decorations"""
         import io
         import sys
@@ -2197,7 +1881,7 @@ class Rankle:
                 print(f"Hostname: {geo['hostname']}")
 
         # Technology Stack
-        print("\n[TECHNOLOGY]")
+        print(f"\n[TECHNOLOGY]")
         if "technologies_web" in self.results:
             tech = self.results["technologies_web"]
             print(f"CMS: {tech.get('cms', 'Unknown')}")
@@ -2211,7 +1895,7 @@ class Rankle:
             print(f"Server: {server}")
 
         # Security
-        print("\n[SECURITY]")
+        print(f"\n[SECURITY]")
         if "tls" in self.results:
             tls = self.results["tls"]
             print(f"TLS Version: {tls.get('tls_version', 'N/A')}")
@@ -2237,9 +1921,9 @@ class Rankle:
         # Advanced Fingerprint
         if "advanced_fingerprint" in self.results:
             fp = self.results["advanced_fingerprint"]
-            print("\n[FINGERPRINTING]")
+            print(f"\n[FINGERPRINTING]")
             if fp.get("server_fingerprint"):
-                print(f"Server Versions: {', '.join([f'{k}:{v}' for k, v in fp['server_fingerprint'].items()])}")
+                print(f"Server Versions: {', '.join([f'{k}:{v}' for k,v in fp['server_fingerprint'].items()])}")
             if fp.get("http_methods"):
                 print(f"HTTP Methods: {', '.join(fp['http_methods'])}")
             if fp.get("api_endpoints"):
@@ -2261,7 +1945,7 @@ class Rankle:
 
         # WHOIS
         if "whois" in self.results:
-            print("\n[WHOIS]")
+            print(f"\n[WHOIS]")
             whois = self.results["whois"]
             print(f"Registrar: {whois.get('registrar', 'N/A')}")
             print(f"Created: {whois.get('creation_date', 'N/A')}")
@@ -2271,14 +1955,14 @@ class Rankle:
 
         # DNS Records (TXT/SPF)
         if "dns" in self.results and self.results["dns"].get("TXT"):
-            print("\n[DNS_RECORDS]")
+            print(f"\n[DNS_RECORDS]")
             for txt in self.results["dns"]["TXT"][:5]:
                 txt_short = txt[:100] if len(txt) > 100 else txt
                 print(f"TXT: {txt_short}")
 
         # Origin Infrastructure
         if "origin_infrastructure" in self.results and self.results["origin_infrastructure"].get("found"):
-            print("\n[ORIGIN_INFRASTRUCTURE]")
+            print(f"\n[ORIGIN_INFRASTRUCTURE]")
             origin = self.results["origin_infrastructure"]
             print(f"Methods: {', '.join(origin.get('methods_used', []))}")
             print(f"IPs: {', '.join(origin.get('origin_ips', [])[:5])}")

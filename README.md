@@ -686,37 +686,11 @@ Rankle implements several security measures:
 <!-- API_START -->
 <!-- AUTO-GENERATED: Do not edit manually -->
 
-### 🔧 Configuration Constants
-
-The following constants can be customized:
-
-| Constant | Default Value | Description |
-|----------|---------------|-------------|
-| `HTTP_TIMEOUT` | `45` | Http Timeout |
-| `HTTP_TIMEOUT_SHORT` | `15` | Http Timeout Short |
-| `DNS_TIMEOUT` | `10` | Dns Timeout |
-| `SSL_TIMEOUT` | `5` | Ssl Timeout |
-| `WHOIS_TIMEOUT` | `10` | Whois Timeout |
-| `HTTP_TIMEOUT` | `45` | Http Timeout |
-| `HTTP_TIMEOUT_SHORT` | `15` | Http Timeout Short |
-| `HTTP_OK` | `200` | Http Ok |
-| `HTTP_MOVED_PERMANENTLY` | `301` | Http Moved Permanently |
-| `HTTP_FOUND` | `302` | Http Found |
-| `HTTP_FORBIDDEN` | `403` | Http Forbidden |
-| `HTTP_NOT_FOUND` | `404` | Http Not Found |
-| `COMMON_WEB_PORTS` | `[80, 443, 8080, 8443]` | Common Web Ports |
-| `COMMON_SERVICES_PORTS` | `[22, 21, 25, 3306, 5432]` | Common Services Ports |
-| `MAX_RETRIES` | `3` | Max Retries |
-| `RETRY_DELAY` | `2` | Retry Delay |
-| `MIN_CMS_INDICATORS` | `2` | Min Cms Indicators |
-| `MIN_CMS_INDICATORS_NO_META` | `3` | Min Cms Indicators No Meta |
-| `MAX_SUBDOMAINS_DISPLAY` | `50` | Max Subdomains Display |
-
 ### 📚 Public Methods
 
 Main public methods available in the Rankle class:
 
-#### `analyze_http_headers() -> Optional[Tuple[Dict[str, Any], requests.Response]]`
+#### `analyze_http_headers()`
 
 Analyze HTTP headers and detect technologies from headers
 
@@ -730,7 +704,7 @@ ETHICAL METHODS ONLY - No active attacks
 
 ---
 
-#### `enumerate_subdomains_crtsh() -> List[str]`
+#### `enumerate_subdomains_crtsh()`
 
 Enumerate subdomains using Certificate Transparency logs
 
@@ -738,7 +712,7 @@ Queries crt.sh without requiring API keys - 100% passive
 
 ---
 
-#### `analyze_dns() -> Dict[str, List[str]]`
+#### `analyze_dns()`
 
 Comprehensive DNS enumeration using dnspython
 
@@ -746,7 +720,7 @@ No external dependencies required
 
 ---
 
-#### `analyze_tls_certificate() -> Optional[Dict[str, Any]]`
+#### `analyze_tls_certificate()`
 
 Analyze TLS/SSL certificate using Python's ssl module
 
@@ -760,15 +734,7 @@ Advanced fingerprinting using multiple techniques
 
 ---
 
-#### `detect_technologies_enhanced(response: Optional[requests.Response] = None) -> Optional[Dict[str, Any]]`
-
-Enhanced technology detection with confidence scoring and version detection
-
-Uses signature-based detection from tech_signatures.json
-
----
-
-#### `detect_technologies(response: Optional[requests.Response] = None) -> Optional[Dict[str, Any]]`
+#### `detect_technologies(response = None)`
 
 Detect web technologies including CMS, frameworks, and libraries
 
@@ -776,7 +742,7 @@ Analyzes HTML content and performs fingerprinting
 
 ---
 
-#### `detect_cdn_waf(headers: Dict[str, str], cnames: Optional[List[str]] = None) -> Tuple[Optional[str], Optional[str]]`
+#### `detect_cdn_waf(headers, cnames = None)`
 
 Detect CDN and Web Application Firewall
 
@@ -785,6 +751,14 @@ Detect CDN and Web Application Firewall
 #### `detect_cloud_provider(ip, isp_name = None, hostname = None)`
 
 Detect cloud/hosting provider based on IP, ISP, and hostname
+
+---
+
+#### `analyze_geolocation(ip)`
+
+Analyze geolocation using free public API
+
+Uses ipapi.co which doesn't require API key for basic usage
 
 ---
 
