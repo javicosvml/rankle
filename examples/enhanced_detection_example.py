@@ -5,8 +5,8 @@ Example: Enhanced Technology Detection
 Demonstrates the new confidence-based technology detection system
 """
 
-import sys
 import os
+import sys
 
 # Add parent directory to path  # noqa: E402
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -58,7 +58,9 @@ def main():
                     else:
                         indicator = "🟠"
 
-                    print(f"  {indicator} {tech['name']}{version_str} ({confidence_pct}%)")
+                    print(
+                        f"  {indicator} {tech['name']}{version_str} ({confidence_pct}%)"
+                    )
                 print()
 
         else:

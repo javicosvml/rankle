@@ -16,17 +16,17 @@ A comprehensive web infrastructure analyzer using pure Python libraries:
 100% Open Source - No API keys required
 """
 
-import sys
 import json
 import re
 import socket
 import ssl
+import sys
 from datetime import datetime
 from urllib.parse import urlparse
 
 try:
-    import requests
     import dns.resolver
+    import requests
     from bs4 import BeautifulSoup
 except ImportError:
     print("\n" + "=" * 80)
@@ -90,7 +90,9 @@ class Rankle:
         print("🌐 Analyzing HTTP Headers and Technologies...")
 
         try:
-            response = self.session.get(f"https://{self.domain}", timeout=45, allow_redirects=True)
+            response = self.session.get(
+                f"https://{self.domain}", timeout=45, allow_redirects=True
+            )
 
             headers = {k.lower(): v for k, v in response.headers.items()}
 
@@ -157,7 +159,15 @@ class Rankle:
                     # Look for common non-CDN subdomains
                     if any(
                         keyword in subdomain.lower()
-                        for keyword in ["origin", "direct", "admin", "vpn", "mail", "ftp", "cpanel"]
+                        for keyword in [
+                            "origin",
+                            "direct",
+                            "admin",
+                            "vpn",
+                            "mail",
+                            "ftp",
+                            "cpanel",
+                        ]
                     ):
                         import dns.resolver
 
@@ -192,9 +202,13 @@ class Rankle:
                             try:
                                 import requests
 
-                                geo = requests.get(f"https://ipapi.co/{ip}/json/", timeout=5).json()
+                                geo = requests.get(
+                                    f"https://ipapi.co/{ip}/json/", timeout=5
+                                ).json()
                                 if "org" in geo:
-                                    print(f"      • MX IP: {ip} ({geo.get('org', 'Unknown')})")
+                                    print(
+                                        f"      • MX IP: {ip} ({geo.get('org', 'Unknown')})"
+                                    )
                             except:
                                 pass
                     except:
@@ -224,7 +238,10 @@ class Rankle:
             print("   └─ Method 4: Checking SSL SANs for direct-access domains...")
             san_domains = self.results["tls"]["san_domains"]
             for san in san_domains[:10]:
-                if any(keyword in san.lower() for keyword in ["origin", "direct", "admin", "-backend", "-api"]):
+                if any(
+                    keyword in san.lower()
+                    for keyword in ["origin", "direct", "admin", "-backend", "-api"]
+                ):
                     try:
                         import dns.resolver
 
@@ -243,7 +260,15 @@ class Rankle:
         base = self.domain.replace("www.", "")
 
         # Generate test patterns
-        test_domains.extend([f"origin.{base}", f"direct.{base}", f"admin.{base}", f"backend.{base}", f"api.{base}"])
+        test_domains.extend(
+            [
+                f"origin.{base}",
+                f"direct.{base}",
+                f"admin.{base}",
+                f"backend.{base}",
+                f"api.{base}",
+            ]
+        )
 
         for test_domain in test_domains[:5]:
             try:
@@ -270,7 +295,12 @@ class Rankle:
                     provider, confidence, hostname = self.detect_cloud_provider(ip)
                     if provider != "Unknown":
                         origin_providers.append(
-                            {"ip": ip, "provider": provider, "confidence": confidence, "hostname": hostname}
+                            {
+                                "ip": ip,
+                                "provider": provider,
+                                "confidence": confidence,
+                                "hostname": hostname,
+                            }
                         )
                         print(f"      • {ip} → {provider} ({confidence} confidence)")
                 except:
@@ -360,12 +390,18 @@ class Rankle:
         for record_type, description in record_types.items():
             try:
                 # Use base_domain for organizational records
-                query_domain = base_domain if record_type in ["MX", "NS", "TXT", "SOA"] else self.domain
+                query_domain = (
+                    base_domain
+                    if record_type in ["MX", "NS", "TXT", "SOA"]
+                    else self.domain
+                )
 
                 answers = resolver.resolve(query_domain, record_type)
 
                 if record_type == "MX":
-                    dns_records[record_type] = [f"{rdata.preference} {rdata.exchange}" for rdata in answers]
+                    dns_records[record_type] = [
+                        f"{rdata.preference} {rdata.exchange}" for rdata in answers
+                    ]
                 else:
                     dns_records[record_type] = [str(rdata) for rdata in answers]
 
@@ -380,7 +416,7 @@ class Rankle:
             except dns.exception.Timeout:
                 dns_records[record_type] = []
                 print(f"   └─ {description}: Timeout")
-            except Exception as e:
+            except Exception:
                 dns_records[record_type] = []
 
         self.results["dns"] = dns_records
@@ -409,7 +445,9 @@ class Rankle:
                 "serial_number": cert.get("serialNumber"),
                 "valid_from": cert.get("notBefore"),
                 "valid_until": cert.get("notAfter"),
-                "san_domains": [x[1] for x in cert.get("subjectAltName", []) if x[0] == "DNS"],
+                "san_domains": [
+                    x[1] for x in cert.get("subjectAltName", []) if x[0] == "DNS"
+                ],
                 "cipher_suite": cipher,
                 "tls_version": version,
             }
@@ -430,8 +468,8 @@ class Rankle:
             self.results["tls"] = tls_info
             return tls_info
 
-        except socket.timeout:
-            print(f"   └─ Connection timeout")
+        except TimeoutError:
+            print("   └─ Connection timeout")
             return None
         except ssl.SSLError as e:
             print(f"   └─ SSL Error: {str(e)}")
@@ -469,7 +507,9 @@ class Rankle:
 
             for method in methods_to_test:
                 try:
-                    resp = self.session.request(method, f"https://{self.domain}", timeout=5)
+                    resp = self.session.request(
+                        method, f"https://{self.domain}", timeout=5
+                    )
                     if resp.status_code not in [405, 501]:
                         allowed_methods.append(method)
                 except:
@@ -537,7 +577,9 @@ class Rankle:
                             {
                                 "endpoint": endpoint,
                                 "status": resp.status_code,
-                                "content_type": resp.headers.get("Content-Type", "Unknown"),
+                                "content_type": resp.headers.get(
+                                    "Content-Type", "Unknown"
+                                ),
                             }
                         )
                         print(f"      • Found: {endpoint} [{resp.status_code}]")
@@ -665,7 +707,10 @@ class Rankle:
             detected_headers = {}
             for header, tech in tech_headers.items():
                 if header in response.headers:
-                    detected_headers[header] = {"technology": tech, "value": response.headers[header]}
+                    detected_headers[header] = {
+                        "technology": tech,
+                        "value": response.headers[header],
+                    }
                     print(f"      • {header}: {response.headers[header][:50]}")
 
             fingerprint_results["technology_headers"] = detected_headers
@@ -732,7 +777,9 @@ class Rankle:
             print(f"   └─ CMS: {technologies['cms']}")
 
             if technologies["frameworks"]:
-                print(f"   └─ JavaScript Frameworks: {', '.join(technologies['frameworks'])}")
+                print(
+                    f"   └─ JavaScript Frameworks: {', '.join(technologies['frameworks'])}"
+                )
 
             if technologies["analytics"]:
                 print(f"   └─ Analytics: {', '.join(technologies['analytics'][:3])}")
@@ -756,18 +803,33 @@ class Rankle:
 
         # Check robots.txt for CMS hints
         try:
-            robots_response = self.session.get(f"https://{self.domain}/robots.txt", timeout=5)
+            robots_response = self.session.get(
+                f"https://{self.domain}/robots.txt", timeout=5
+            )
             if robots_response.status_code == 200:
                 robots_text = robots_response.text.lower()
 
                 if any(
-                    indicator in robots_text for indicator in ["/core/", "/sites/", "drupal", "/user/", "/admin/?q="]
+                    indicator in robots_text
+                    for indicator in [
+                        "/core/",
+                        "/sites/",
+                        "drupal",
+                        "/user/",
+                        "/admin/?q=",
+                    ]
                 ):
-                    print(f"   └─ CMS Detection: Found Drupal hints in robots.txt")
+                    print("   └─ CMS Detection: Found Drupal hints in robots.txt")
                     return "Drupal"
-                elif any(indicator in robots_text for indicator in ["/wp-admin", "/wp-content", "/wp-includes"]):
+                elif any(
+                    indicator in robots_text
+                    for indicator in ["/wp-admin", "/wp-content", "/wp-includes"]
+                ):
                     return "WordPress"
-                elif any(indicator in robots_text for indicator in ["/administrator/", "/components/"]):
+                elif any(
+                    indicator in robots_text
+                    for indicator in ["/administrator/", "/components/"]
+                ):
                     return "Joomla"
         except:
             pass
@@ -782,7 +844,12 @@ class Rankle:
                 "/core/install.php",
                 "/update.php",
             ],
-            "WordPress": ["/wp-admin/", "/wp-login.php", "/wp-content/plugins/", "/xmlrpc.php"],
+            "WordPress": [
+                "/wp-admin/",
+                "/wp-login.php",
+                "/wp-content/plugins/",
+                "/xmlrpc.php",
+            ],
             "Joomla": ["/administrator/", "/components/com_content/", "/media/jui/js/"],
         }
 
@@ -791,7 +858,9 @@ class Rankle:
             for path in paths[:2]:  # Only check first 2 to save time
                 try:
                     test_url = f"https://{self.domain}{path}"
-                    test_response = self.session.head(test_url, timeout=5, allow_redirects=False)
+                    test_response = self.session.head(
+                        test_url, timeout=5, allow_redirects=False
+                    )
                     # If we get 200, 301, 302, 403 (forbidden but exists), it's likely there
                     if test_response.status_code in [200, 301, 302, 403]:
                         print(f"   └─ CMS Detection: Found {cms_name} path: {path}")
@@ -800,7 +869,9 @@ class Rankle:
                     pass
 
         # Check for specific HTML/CSS classes and IDs
-        if soup.find(attrs={"class": re.compile(r"drupal|views-|block-|node-|page-node")}):
+        if soup.find(
+            attrs={"class": re.compile(r"drupal|views-|block-|node-|page-node")}
+        ):
             return "Drupal"
 
         if soup.find(attrs={"id": re.compile(r"drupal-|block-")}):
@@ -904,7 +975,9 @@ class Rankle:
                         return meta.get("content")
 
                     # Check for Drupal version in various patterns
-                    version_match = re.search(r"drupal[.\s]+(\d+(?:\.\d+)*)", html_lower)
+                    version_match = re.search(
+                        r"drupal[.\s]+(\d+(?:\.\d+)*)", html_lower
+                    )
                     if version_match:
                         return f"Drupal {version_match.group(1)}"
 
@@ -984,11 +1057,30 @@ class Rankle:
         print("\n🚀 Detecting CDN and WAF...")
 
         cdn_indicators = {
-            "Cloudflare": ["cloudflare", "cf-ray", "__cfduid", "cf-cache-status", "__cf"],
+            "Cloudflare": [
+                "cloudflare",
+                "cf-ray",
+                "__cfduid",
+                "cf-cache-status",
+                "__cf",
+            ],
             "Fastly": ["fastly", "x-fastly", "x-timer"],
-            "Akamai": ["akamai", "akamaighost", "akamaitechnologies", "edgesuite", "edgekey"],
+            "Akamai": [
+                "akamai",
+                "akamaighost",
+                "akamaitechnologies",
+                "edgesuite",
+                "edgekey",
+            ],
             "Amazon CloudFront": ["cloudfront", "x-amz-cf", "x-cache"],
-            "TransparentEdge": ["transparentedge", "edge2befaster", "edgetcdn", "tp-cache", "tedge", "x-edge"],
+            "TransparentEdge": [
+                "transparentedge",
+                "edge2befaster",
+                "edgetcdn",
+                "tp-cache",
+                "tedge",
+                "x-edge",
+            ],
             "KeyCDN": ["keycdn"],
             "StackPath": ["stackpath", "netdna"],
             "Varnish": ["varnish", "x-varnish", "via.*varnish"],
@@ -1009,7 +1101,13 @@ class Rankle:
             "Sucuri WAF": ["sucuri", "cloudproxy"],
             "Incapsula/Imperva": ["incapsula", "visid_incap", "imperva"],
             "ModSecurity": ["mod_security", "modsecurity"],
-            "AWS WAF": ["x-amzn-waf", "x-amzn-requestid", "awselb", "x-amzn-trace-id", "x-amz-apigw"],
+            "AWS WAF": [
+                "x-amzn-waf",
+                "x-amzn-requestid",
+                "awselb",
+                "x-amzn-trace-id",
+                "x-amz-apigw",
+            ],
             "Barracuda": ["barracuda", "barra"],
             "F5 BIG-IP ASM": ["bigip", "f5", "f5-trace"],
             "Fortinet FortiWeb": ["fortiweb", "fortigate"],
@@ -1062,7 +1160,9 @@ class Rankle:
         active_waf = self._active_waf_detection()
         if active_waf and active_waf not in detected_wafs:
             detected_wafs.append(active_waf["name"])
-            detection_methods.append(f"{active_waf['name']} (active detection: {active_waf['method']})")
+            detection_methods.append(
+                f"{active_waf['name']} (active detection: {active_waf['method']})"
+            )
 
         cdn_result = ", ".join(detected_cdns) if detected_cdns else "Not detected"
         waf_result = ", ".join(detected_wafs) if detected_wafs else "Not detected"
@@ -1112,7 +1212,9 @@ class Rankle:
 
         # Get baseline response
         try:
-            baseline = self.session.get(f"https://{self.domain}", timeout=10, allow_redirects=False)
+            baseline = self.session.get(
+                f"https://{self.domain}", timeout=10, allow_redirects=False
+            )
             baseline_status = baseline.status_code
             baseline_headers = {k.lower(): v for k, v in baseline.headers.items()}
         except Exception as e:
@@ -1150,11 +1252,15 @@ class Rankle:
                         "name": "AWS WAF",
                         "method": payload_test["name"],
                         "status": status,
-                        "confidence": "high" if sum(aws_waf_indicators) >= 3 else "medium",
+                        "confidence": (
+                            "high" if sum(aws_waf_indicators) >= 3 else "medium"
+                        ),
                     }
 
                 # Cloudflare WAF indicators
-                if status == 403 and any(k.startswith("cf-") for k in resp_headers.keys()):
+                if status == 403 and any(
+                    k.startswith("cf-") for k in resp_headers.keys()
+                ):
                     print(f"      ✓ Cloudflare WAF detected via {payload_test['name']}")
                     return {
                         "name": "Cloudflare WAF",
@@ -1168,13 +1274,23 @@ class Rankle:
                     # Check response body for WAF signatures
                     waf_signatures = {
                         "AWS WAF": ["aws", "cloudfront", "access denied", "forbidden"],
-                        "ModSecurity": ["mod_security", "modsecurity", "not acceptable"],
-                        "Generic WAF": ["web application firewall", "security policy", "request blocked"],
+                        "ModSecurity": [
+                            "mod_security",
+                            "modsecurity",
+                            "not acceptable",
+                        ],
+                        "Generic WAF": [
+                            "web application firewall",
+                            "security policy",
+                            "request blocked",
+                        ],
                     }
 
                     for waf_name, signatures in waf_signatures.items():
                         if any(sig in resp_text for sig in signatures):
-                            print(f"      ✓ {waf_name} detected via {payload_test['name']}")
+                            print(
+                                f"      ✓ {waf_name} detected via {payload_test['name']}"
+                            )
                             return {
                                 "name": waf_name,
                                 "method": payload_test["name"],
@@ -1228,19 +1344,37 @@ class Rankle:
             "AWS": {
                 "asn": ["AS16509", "AS14618", "AS8987"],
                 "isp": ["amazon", "aws", "amazon.com", "amazon data services"],
-                "hostname": ["amazonaws.com", "compute.amazonaws", "ec2", "s3", "cloudfront"],
+                "hostname": [
+                    "amazonaws.com",
+                    "compute.amazonaws",
+                    "ec2",
+                    "s3",
+                    "cloudfront",
+                ],
                 "ip_ranges": [],  # Could add IP ranges
             },
             "Azure": {
                 "asn": ["AS8075", "AS8068"],
                 "isp": ["microsoft", "azure", "microsoft corporation"],
-                "hostname": ["azurewebsites", "azure", "cloudapp.azure", "windows.net", "azureedge"],
+                "hostname": [
+                    "azurewebsites",
+                    "azure",
+                    "cloudapp.azure",
+                    "windows.net",
+                    "azureedge",
+                ],
                 "ip_ranges": [],
             },
             "Google Cloud (GCP)": {
                 "asn": ["AS15169", "AS19527", "AS139190", "AS396982"],
                 "isp": ["google", "google cloud", "google llc"],
-                "hostname": ["googleusercontent", "google", "gcp", "appspot", "1e100.net"],
+                "hostname": [
+                    "googleusercontent",
+                    "google",
+                    "gcp",
+                    "appspot",
+                    "1e100.net",
+                ],
                 "ip_ranges": [],
             },
             "DigitalOcean": {
@@ -1339,11 +1473,15 @@ class Rankle:
                 match_score += 3
 
             # Check ISP name
-            if isp_name and any(isp_pattern in isp_lower for isp_pattern in patterns["isp"]):
+            if isp_name and any(
+                isp_pattern in isp_lower for isp_pattern in patterns["isp"]
+            ):
                 match_score += 2
 
             # Check hostname/reverse DNS
-            if hostname and any(host_pattern in hostname_lower for host_pattern in patterns["hostname"]):
+            if hostname and any(
+                host_pattern in hostname_lower for host_pattern in patterns["hostname"]
+            ):
                 match_score += 2
 
             # Determine provider based on match score
@@ -1399,7 +1537,9 @@ class Rankle:
                 print(f"   └─ ASN: {geo_info['asn']}")
 
             # Detect cloud provider
-            provider, confidence, hostname = self.detect_cloud_provider(ip, isp_name=geo_info["isp"])
+            provider, confidence, hostname = self.detect_cloud_provider(
+                ip, isp_name=geo_info["isp"]
+            )
 
             if provider != "Unknown":
                 print(f"   └─ Cloud Provider: {provider} (confidence: {confidence})")
@@ -1456,7 +1596,11 @@ class Rankle:
                 "creation_date": safe_get(w, "creation_date"),
                 "expiration_date": safe_get(w, "expiration_date"),
                 "updated_date": safe_get(w, "updated_date"),
-                "name_servers": w.name_servers if hasattr(w, "name_servers") and w.name_servers else [],
+                "name_servers": (
+                    w.name_servers
+                    if hasattr(w, "name_servers") and w.name_servers
+                    else []
+                ),
                 "status": w.status if hasattr(w, "status") and w.status else [],
                 "emails": w.emails if hasattr(w, "emails") and w.emails else [],
                 "org": safe_get(w, "org"),
@@ -1534,8 +1678,12 @@ class Rankle:
 
             # Parse basic information
             registrar_match = re.search(r"Registrar:\s*(.+)", whois_text, re.IGNORECASE)
-            created_match = re.search(r"Creation Date:\s*(.+)", whois_text, re.IGNORECASE)
-            expires_match = re.search(r"Expir(?:y|ation) Date:\s*(.+)", whois_text, re.IGNORECASE)
+            created_match = re.search(
+                r"Creation Date:\s*(.+)", whois_text, re.IGNORECASE
+            )
+            expires_match = re.search(
+                r"Expir(?:y|ation) Date:\s*(.+)", whois_text, re.IGNORECASE
+            )
 
             if registrar_match:
                 print(f"   └─ Registrar: {registrar_match.group(1).strip()}")
@@ -1545,9 +1693,15 @@ class Rankle:
                 print(f"   └─ Expires: {expires_match.group(1).strip()}")
 
             self.results["whois"] = {
-                "registrar": registrar_match.group(1).strip() if registrar_match else "N/A",
-                "creation_date": created_match.group(1).strip() if created_match else "N/A",
-                "expiration_date": expires_match.group(1).strip() if expires_match else "N/A",
+                "registrar": (
+                    registrar_match.group(1).strip() if registrar_match else "N/A"
+                ),
+                "creation_date": (
+                    created_match.group(1).strip() if created_match else "N/A"
+                ),
+                "expiration_date": (
+                    expires_match.group(1).strip() if expires_match else "N/A"
+                ),
                 "raw_response": whois_text[:500],  # Store first 500 chars
             }
 
@@ -1557,7 +1711,7 @@ class Rankle:
     def analyze(self):
         """Execute complete reconnaissance analysis"""
         print("=" * 80)
-        print(f"🃏 RANKLE - Web Infrastructure Reconnaissance")
+        print("🃏 RANKLE - Web Infrastructure Reconnaissance")
         print("=" * 80)
         print(f"🎯 Target: {self.domain}")
         print(f"⏰ Timestamp: {self.scan_timestamp}")
@@ -1590,7 +1744,10 @@ class Rankle:
 
         # Try to find origin infrastructure behind WAF/CDN
         # Only run if CDN/WAF detected
-        if self.results.get("cdn") != "Not detected" or self.results.get("waf") != "Not detected":
+        if (
+            self.results.get("cdn") != "Not detected"
+            or self.results.get("waf") != "Not detected"
+        ):
             self.find_origin_infrastructure()
 
         print("\n" + "=" * 80)
@@ -1601,12 +1758,12 @@ class Rankle:
 
     def print_summary_report(self):
         """Print comprehensive summary report"""
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print("📊 RECONNAISSANCE SUMMARY REPORT")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
         print(f"🎯 Domain: {self.domain}")
         print(f"⏰ Scan Time: {self.scan_timestamp}")
-        print(f"{'='*80}\n")
+        print(f"{'=' * 80}\n")
 
         # Section 1: Basic Information
         print("═" * 80)
@@ -1642,7 +1799,7 @@ class Rankle:
                 print(f"  CDN/Libraries:     {', '.join(tech['cdn'][:3])}")
 
         if "technologies" in self.results:
-            print(f"\n  Server Technologies:")
+            print("\n  Server Technologies:")
             for tech in self.results["technologies"]:
                 print(f"    • {tech}")
 
@@ -1654,20 +1811,20 @@ class Rankle:
         if "tls" in self.results:
             tls = self.results["tls"]
             issuer = tls.get("issuer", {}).get("organizationName", "N/A")
-            print(f"  TLS/SSL:")
+            print("  TLS/SSL:")
             print(f"    • Issuer:        {issuer}")
             print(f"    • Valid Until:   {tls.get('valid_until', 'N/A')}")
             print(f"    • TLS Version:   {tls.get('tls_version', 'N/A')}")
 
         if "security_headers" in self.results and self.results["security_headers"]:
-            print(f"\n  Security Headers:")
+            print("\n  Security Headers:")
             for header, value in self.results["security_headers"].items():
                 value_short = value[:60] + "..." if len(value) > 60 else value
                 print(f"    • {header}: {value_short}")
         else:
-            print(f"\n  ⚠️  Security Headers: Not detected (Potential risk)")
+            print("\n  ⚠️  Security Headers: Not detected (Potential risk)")
 
-        print(f"\n  CDN/WAF Protection:")
+        print("\n  CDN/WAF Protection:")
         print(f"    • CDN:           {self.results.get('cdn', 'Not detected')}")
         print(f"    • WAF:           {self.results.get('waf', 'Not detected')}")
 
@@ -1680,12 +1837,12 @@ class Rankle:
             dns = self.results["dns"]
 
             if dns.get("NS"):
-                print(f"  Name Servers:")
+                print("  Name Servers:")
                 for ns in dns["NS"][:5]:
                     print(f"    • {ns}")
 
             if dns.get("MX"):
-                print(f"\n  Mail Servers:")
+                print("\n  Mail Servers:")
                 for mx in dns["MX"][:3]:
                     print(f"    • {mx}")
 
@@ -1698,7 +1855,7 @@ class Rankle:
             print("🔍 SUBDOMAIN ENUMERATION")
             print("═" * 80)
             print(f"  Total Found: {len(self.results['subdomains'])}")
-            print(f"\n  Subdomains (first 15):")
+            print("\n  Subdomains (first 15):")
             for subdomain in self.results["subdomains"][:15]:
                 print(f"    • {subdomain}")
             if len(self.results["subdomains"]) > 15:
@@ -1721,7 +1878,7 @@ class Rankle:
                 print("═" * 80)
 
                 if fp.get("server_fingerprint"):
-                    print(f"  Server Versions:")
+                    print("  Server Versions:")
                     for tech, version in fp["server_fingerprint"].items():
                         print(f"    • {tech}: {version}")
 
@@ -1731,7 +1888,9 @@ class Rankle:
                 if fp.get("api_endpoints"):
                     print(f"\n  Discovered API Endpoints ({len(fp['api_endpoints'])}):")
                     for ep in fp["api_endpoints"][:10]:
-                        print(f"    • {ep['endpoint']} [{ep['status']}] - {ep['content_type']}")
+                        print(
+                            f"    • {ep['endpoint']} [{ep['status']}] - {ep['content_type']}"
+                        )
 
                 if fp.get("exposed_files"):
                     print(f"\n  ⚠️  Exposed Files ({len(fp['exposed_files'])}):")
@@ -1739,12 +1898,12 @@ class Rankle:
                         print(f"    • {file}")
 
                 if fp.get("detected_from_cookies"):
-                    print(f"\n  Technology from Cookies:")
+                    print("\n  Technology from Cookies:")
                     for tech in set(fp["detected_from_cookies"]):
                         print(f"    • {tech}")
 
                 if fp.get("error_page_tech"):
-                    print(f"\n  Error Page Analysis:")
+                    print("\n  Error Page Analysis:")
                     for tech in fp["error_page_tech"]:
                         print(f"    • {tech}")
 
@@ -1757,7 +1916,9 @@ class Rankle:
             print("🌍 GEOLOCATION & HOSTING")
             print("═" * 80)
             geo = self.results["geolocation"]
-            print(f"  Location:          {geo.get('city', 'N/A')}, {geo.get('country', 'N/A')}")
+            print(
+                f"  Location:          {geo.get('city', 'N/A')}, {geo.get('country', 'N/A')}"
+            )
             print(f"  ISP:               {geo.get('isp', 'N/A')}")
             if geo.get("asn"):
                 print(f"  ASN:               {geo['asn']}")
@@ -1779,7 +1940,9 @@ class Rankle:
             print(f"  Expires:           {whois.get('expiration_date', 'N/A')}")
 
         # Section 8: Origin Infrastructure (if found)
-        if "origin_infrastructure" in self.results and self.results["origin_infrastructure"].get("found"):
+        if "origin_infrastructure" in self.results and self.results[
+            "origin_infrastructure"
+        ].get("found"):
             print(f"\n{'═' * 80}")
             print("🎯 ORIGIN INFRASTRUCTURE (Behind WAF/CDN)")
             print("═" * 80)
@@ -1788,14 +1951,16 @@ class Rankle:
             print(f"  Origin IPs Found:  {len(origin.get('origin_ips', []))}")
 
             if origin.get("origin_providers"):
-                print(f"\n  Origin Hosting:")
+                print("\n  Origin Hosting:")
                 for provider_info in origin["origin_providers"][:5]:
                     print(
                         f"    • {provider_info['ip']} → {provider_info['provider']} ({provider_info['confidence']} confidence)"
                     )
 
             if origin.get("origin_hostnames"):
-                print(f"\n  Direct Access Domains ({len(origin['origin_hostnames'])} found):")
+                print(
+                    f"\n  Direct Access Domains ({len(origin['origin_hostnames'])} found):"
+                )
                 for hostname in list(origin["origin_hostnames"])[:5]:
                     print(f"    • {hostname}")
 
@@ -1812,7 +1977,9 @@ class Rankle:
             reports_dir = os.path.join(os.getcwd(), "reports")
             os.makedirs(reports_dir, exist_ok=True)
 
-            filename = os.path.join(reports_dir, f"{self.domain.replace('.', '_')}_rankle.json")
+            filename = os.path.join(
+                reports_dir, f"{self.domain.replace('.', '_')}_rankle.json"
+            )
 
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(self.results, f, indent=2, ensure_ascii=False, default=str)
@@ -1823,15 +1990,17 @@ class Rankle:
     def save_text_report(self, filename=None):
         """Save technical text report without decorations"""
         import io
-        import sys
         import os
+        import sys
 
         if filename is None:
             # Create reports directory if it doesn't exist
             reports_dir = os.path.join(os.getcwd(), "reports")
             os.makedirs(reports_dir, exist_ok=True)
 
-            filename = os.path.join(reports_dir, f"{self.domain.replace('.', '_')}_rankle_report.txt")
+            filename = os.path.join(
+                reports_dir, f"{self.domain.replace('.', '_')}_rankle_report.txt"
+            )
 
         # Capture the output
         old_stdout = sys.stdout
@@ -1881,7 +2050,7 @@ class Rankle:
                 print(f"Hostname: {geo['hostname']}")
 
         # Technology Stack
-        print(f"\n[TECHNOLOGY]")
+        print("\n[TECHNOLOGY]")
         if "technologies_web" in self.results:
             tech = self.results["technologies_web"]
             print(f"CMS: {tech.get('cms', 'Unknown')}")
@@ -1895,13 +2064,17 @@ class Rankle:
             print(f"Server: {server}")
 
         # Security
-        print(f"\n[SECURITY]")
+        print("\n[SECURITY]")
         if "tls" in self.results:
             tls = self.results["tls"]
             print(f"TLS Version: {tls.get('tls_version', 'N/A')}")
-            print(f"Certificate Issuer: {tls.get('issuer', {}).get('organizationName', 'N/A')}")
+            print(
+                f"Certificate Issuer: {tls.get('issuer', {}).get('organizationName', 'N/A')}"
+            )
             print(f"Certificate Expiry: {tls.get('valid_until', 'N/A')}")
-            print(f"Cipher: {tls.get('cipher_suite', ('N/A',))[0] if tls.get('cipher_suite') else 'N/A'}")
+            print(
+                f"Cipher: {tls.get('cipher_suite', ('N/A',))[0] if tls.get('cipher_suite') else 'N/A'}"
+            )
             if tls.get("san_domains"):
                 print(f"SANs: {len(tls['san_domains'])} domains")
 
@@ -1921,9 +2094,11 @@ class Rankle:
         # Advanced Fingerprint
         if "advanced_fingerprint" in self.results:
             fp = self.results["advanced_fingerprint"]
-            print(f"\n[FINGERPRINTING]")
+            print("\n[FINGERPRINTING]")
             if fp.get("server_fingerprint"):
-                print(f"Server Versions: {', '.join([f'{k}:{v}' for k,v in fp['server_fingerprint'].items()])}")
+                print(
+                    f"Server Versions: {', '.join([f'{k}:{v}' for k, v in fp['server_fingerprint'].items()])}"
+                )
             if fp.get("http_methods"):
                 print(f"HTTP Methods: {', '.join(fp['http_methods'])}")
             if fp.get("api_endpoints"):
@@ -1945,7 +2120,7 @@ class Rankle:
 
         # WHOIS
         if "whois" in self.results:
-            print(f"\n[WHOIS]")
+            print("\n[WHOIS]")
             whois = self.results["whois"]
             print(f"Registrar: {whois.get('registrar', 'N/A')}")
             print(f"Created: {whois.get('creation_date', 'N/A')}")
@@ -1955,14 +2130,16 @@ class Rankle:
 
         # DNS Records (TXT/SPF)
         if "dns" in self.results and self.results["dns"].get("TXT"):
-            print(f"\n[DNS_RECORDS]")
+            print("\n[DNS_RECORDS]")
             for txt in self.results["dns"]["TXT"][:5]:
                 txt_short = txt[:100] if len(txt) > 100 else txt
                 print(f"TXT: {txt_short}")
 
         # Origin Infrastructure
-        if "origin_infrastructure" in self.results and self.results["origin_infrastructure"].get("found"):
-            print(f"\n[ORIGIN_INFRASTRUCTURE]")
+        if "origin_infrastructure" in self.results and self.results[
+            "origin_infrastructure"
+        ].get("found"):
+            print("\n[ORIGIN_INFRASTRUCTURE]")
             origin = self.results["origin_infrastructure"]
             print(f"Methods: {', '.join(origin.get('methods_used', []))}")
             print(f"IPs: {', '.join(origin.get('origin_ips', [])[:5])}")
@@ -1972,7 +2149,9 @@ class Rankle:
                         f"Provider: {provider_info['ip']} → {provider_info['provider']} ({provider_info['confidence']})"
                     )
             if origin.get("origin_hostnames"):
-                print(f"Direct Domains: {', '.join(list(origin['origin_hostnames'])[:3])}")
+                print(
+                    f"Direct Domains: {', '.join(list(origin['origin_hostnames'])[:3])}"
+                )
 
 
 def print_banner():
@@ -2047,7 +2226,11 @@ def main():
         auto_save = "text"
     elif "--output" in sys.argv or "-o" in sys.argv:
         try:
-            idx = sys.argv.index("--output") if "--output" in sys.argv else sys.argv.index("-o")
+            idx = (
+                sys.argv.index("--output")
+                if "--output" in sys.argv
+                else sys.argv.index("-o")
+            )
             if idx + 1 < len(sys.argv):
                 auto_save = sys.argv[idx + 1]
         except (ValueError, IndexError):
@@ -2076,11 +2259,15 @@ def main():
                 os.makedirs(output_dir, exist_ok=True)
 
             if auto_save in ["json", "both"]:
-                json_path = os.path.join(output_dir, domain.replace(".", "_") + "_rankle.json")
+                json_path = os.path.join(
+                    output_dir, domain.replace(".", "_") + "_rankle.json"
+                )
                 rankle.save_json(json_path)
 
             if auto_save in ["text", "both"]:
-                text_path = os.path.join(output_dir, domain.replace(".", "_") + "_rankle_report.txt")
+                text_path = os.path.join(
+                    output_dir, domain.replace(".", "_") + "_rankle_report.txt"
+                )
                 rankle.save_text_report(text_path)
         else:
             # Interactive mode

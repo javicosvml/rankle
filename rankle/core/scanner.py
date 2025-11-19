@@ -3,13 +3,13 @@ Core scanner class for Rankle - Orchestrates all reconnaissance modules
 """
 
 from datetime import datetime
-from typing import Dict, Any, Optional
 from pathlib import Path
+from typing import Any
 
+from config.settings import DEFAULT_TIMEOUT
 from rankle.core.session import SessionManager
 from rankle.modules.dns import DNSAnalyzer
 from rankle.utils.validators import validate_domain
-from config.settings import DEFAULT_TIMEOUT
 
 
 class RankleScanner:
@@ -21,7 +21,9 @@ class RankleScanner:
     interface for the user.
     """
 
-    def __init__(self, domain: str, verbose: bool = False, timeout: int = DEFAULT_TIMEOUT):
+    def __init__(
+        self, domain: str, verbose: bool = False, timeout: int = DEFAULT_TIMEOUT
+    ):
         """
         Initialize Rankle scanner
 
@@ -40,7 +42,7 @@ class RankleScanner:
         self.verbose = verbose
         self.timeout = timeout
         self.scan_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.results: Dict[str, Any] = {
+        self.results: dict[str, Any] = {
             "domain": domain,
             "scan_timestamp": self.scan_timestamp,
             "scan_version": "2.0.0",
@@ -50,7 +52,7 @@ class RankleScanner:
         self.session = SessionManager(timeout=timeout)
 
         # Initialize modules (lazy initialization for performance)
-        self._dns_analyzer: Optional[DNSAnalyzer] = None
+        self._dns_analyzer: DNSAnalyzer | None = None
 
     @property
     def dns_analyzer(self) -> DNSAnalyzer:
@@ -59,7 +61,7 @@ class RankleScanner:
             self._dns_analyzer = DNSAnalyzer(self.domain)
         return self._dns_analyzer
 
-    def run_full_scan(self) -> Dict[str, Any]:
+    def run_full_scan(self) -> dict[str, Any]:
         """
         Run comprehensive reconnaissance scan
 
@@ -85,7 +87,7 @@ class RankleScanner:
 
         return self.results
 
-    def analyze_dns(self) -> Dict[str, Any]:
+    def analyze_dns(self) -> dict[str, Any]:
         """
         Perform DNS enumeration and analysis
 
@@ -94,7 +96,7 @@ class RankleScanner:
         """
         return self.dns_analyzer.analyze()
 
-    def analyze_http_headers(self) -> Dict[str, Any]:
+    def analyze_http_headers(self) -> dict[str, Any]:
         """
         Analyze HTTP headers and server information
 
@@ -106,7 +108,7 @@ class RankleScanner:
         print("   └─ Module not yet implemented in modular structure")
         return {}
 
-    def analyze_ssl_certificate(self) -> Dict[str, Any]:
+    def analyze_ssl_certificate(self) -> dict[str, Any]:
         """
         Analyze SSL/TLS certificate
 
@@ -118,7 +120,7 @@ class RankleScanner:
         print("   └─ Module not yet implemented in modular structure")
         return {}
 
-    def detect_technologies(self) -> Dict[str, Any]:
+    def detect_technologies(self) -> dict[str, Any]:
         """
         Detect web technologies (CMS, frameworks, libraries)
 
@@ -130,7 +132,7 @@ class RankleScanner:
         print("   └─ Module not yet implemented in modular structure")
         return {}
 
-    def detect_cdn_waf(self) -> Dict[str, Any]:
+    def detect_cdn_waf(self) -> dict[str, Any]:
         """
         Detect CDN and WAF
 
@@ -142,7 +144,7 @@ class RankleScanner:
         print("   └─ Module not yet implemented in modular structure")
         return {}
 
-    def discover_subdomains(self) -> Dict[str, Any]:
+    def discover_subdomains(self) -> dict[str, Any]:
         """
         Discover subdomains via Certificate Transparency
 
@@ -154,7 +156,7 @@ class RankleScanner:
         print("   └─ Module not yet implemented in modular structure")
         return {}
 
-    def lookup_whois(self) -> Dict[str, Any]:
+    def lookup_whois(self) -> dict[str, Any]:
         """
         Perform WHOIS lookup
 
@@ -166,7 +168,7 @@ class RankleScanner:
         print("   └─ Module not yet implemented in modular structure")
         return {}
 
-    def analyze_geolocation(self) -> Dict[str, Any]:
+    def analyze_geolocation(self) -> dict[str, Any]:
         """
         Analyze geolocation and hosting provider
 

@@ -18,8 +18,8 @@ A comprehensive web infrastructure analyzer:
 100% Open Source - No API keys required
 """
 
-import sys
 import argparse
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -27,14 +27,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 try:
+    from config.settings import OUTPUT_DIR
     from rankle.core.scanner import RankleScanner
+    from rankle.utils.helpers import save_json_file
     from rankle.utils.validators import (
-        validate_domain,
         extract_domain,
         sanitize_filename,
+        validate_domain,
     )
-    from rankle.utils.helpers import save_json_file
-    from config.settings import OUTPUT_DIR
 except ImportError as e:
     print(f"\n❌ Import Error: {e}")
     print("\nPlease ensure all dependencies are installed:")
@@ -92,7 +92,9 @@ For more information, visit: https://github.com/javicosvml/rankle
         help="Output format (default: both)",
     )
 
-    parser.add_argument("--no-save", action="store_true", help="Don't save output to files")
+    parser.add_argument(
+        "--no-save", action="store_true", help="Don't save output to files"
+    )
 
     parser.add_argument(
         "--output-dir",
@@ -101,7 +103,9 @@ For more information, visit: https://github.com/javicosvml/rankle
         help=f"Output directory (default: {OUTPUT_DIR})",
     )
 
-    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Enable verbose output"
+    )
 
     parser.add_argument("--version", action="version", version="Rankle v2.0.0")
 

@@ -7,12 +7,12 @@ then updates the README.md file between the API_START and API_END markers.
 """
 
 import ast
-from typing import List, Dict, Any
+from typing import Any
 
 
 def parse_rankle_file() -> ast.Module:
     """Parse rankle.py and return AST"""
-    with open("rankle.py", "r", encoding="utf-8") as f:
+    with open("rankle.py", encoding="utf-8") as f:
         return ast.parse(f.read(), filename="rankle.py")
 
 
@@ -30,7 +30,7 @@ def extract_return_type(node: ast.FunctionDef) -> str:
     return ""
 
 
-def extract_constants(tree: ast.Module) -> List[Dict[str, Any]]:
+def extract_constants(tree: ast.Module) -> list[dict[str, Any]]:
     """Extract class constants from Rankle class"""
     constants = []
 
@@ -42,18 +42,24 @@ def extract_constants(tree: ast.Module) -> List[Dict[str, Any]]:
                         if isinstance(target, ast.Name):
                             name = target.id
                             # Solo constantes (UPPERCASE)
-                            if name.isupper() or name.startswith("HTTP_") or name.startswith("DNS_"):
+                            if (
+                                name.isupper()
+                                or name.startswith("HTTP_")
+                                or name.startswith("DNS_")
+                            ):
                                 try:
                                     value = ast.literal_eval(item.value)
                                     constants.append({"name": name, "value": value})
                                 except Exception:
                                     # Si no se puede evaluar, usar repr
-                                    constants.append({"name": name, "value": ast.unparse(item.value)})
+                                    constants.append(
+                                        {"name": name, "value": ast.unparse(item.value)}
+                                    )
 
     return constants
 
 
-def extract_public_methods(tree: ast.Module) -> List[Dict[str, Any]]:
+def extract_public_methods(tree: ast.Module) -> list[dict[str, Any]]:
     """Extract public methods from Rankle class"""
     methods = []
 
@@ -90,7 +96,9 @@ def extract_public_methods(tree: ast.Module) -> List[Dict[str, Any]]:
                         return_type = extract_return_type(item)
 
                         # Docstring
-                        docstring = ast.get_docstring(item) or "No description available"
+                        docstring = (
+                            ast.get_docstring(item) or "No description available"
+                        )
                         # Solo primera línea del docstring
                         doc_first_line = docstring.split("\n")[0].strip()
 
@@ -99,13 +107,18 @@ def extract_public_methods(tree: ast.Module) -> List[Dict[str, Any]]:
                             signature += f" -> {return_type}"
 
                         methods.append(
-                            {"name": item.name, "signature": signature, "doc": doc_first_line, "full_doc": docstring}
+                            {
+                                "name": item.name,
+                                "signature": signature,
+                                "doc": doc_first_line,
+                                "full_doc": docstring,
+                            }
                         )
 
     return methods
 
 
-def generate_constants_markdown(constants: List[Dict[str, Any]]) -> str:
+def generate_constants_markdown(constants: list[dict[str, Any]]) -> str:
     """Generate markdown for constants"""
     if not constants:
         return ""
@@ -137,7 +150,7 @@ def generate_constants_markdown(constants: List[Dict[str, Any]]) -> str:
     return md
 
 
-def generate_api_markdown(methods: List[Dict[str, Any]]) -> str:
+def generate_api_markdown(methods: list[dict[str, Any]]) -> str:
     """Generate markdown for API documentation"""
     md = "### 📚 Public Methods\n\n"
     md += "Main public methods available in the Rankle class:\n\n"
@@ -180,7 +193,7 @@ def update_readme():
 
     # Read README
     try:
-        with open("README.md", "r", encoding="utf-8") as f:
+        with open("README.md", encoding="utf-8") as f:
             content = f.read()
     except FileNotFoundError:
         print("⚠️  README.md not found")

@@ -3,11 +3,11 @@ Helper utilities for Rankle
 """
 
 import json
-from typing import Any, Dict, List
 from pathlib import Path
+from typing import Any
 
 
-def load_json_file(filepath: Path) -> Dict[str, Any]:
+def load_json_file(filepath: Path) -> dict[str, Any]:
     """
     Load JSON file
 
@@ -18,14 +18,14 @@ def load_json_file(filepath: Path) -> Dict[str, Any]:
         Dictionary with JSON content
     """
     try:
-        with open(filepath, "r", encoding="utf-8") as f:
+        with open(filepath, encoding="utf-8") as f:
             return json.load(f)
     except Exception as e:
         print(f"Error loading JSON file {filepath}: {e}")
         return {}
 
 
-def save_json_file(data: Dict[str, Any], filepath: Path, indent: int = 2) -> bool:
+def save_json_file(data: dict[str, Any], filepath: Path, indent: int = 2) -> bool:
     """
     Save data to JSON file
 
@@ -47,7 +47,7 @@ def save_json_file(data: Dict[str, Any], filepath: Path, indent: int = 2) -> boo
         return False
 
 
-def truncate_list(items: List[Any], max_items: int = 3, show_total: bool = True) -> str:
+def truncate_list(items: list[Any], max_items: int = 3, show_total: bool = True) -> str:
     """
     Truncate list for display
 
@@ -72,7 +72,7 @@ def truncate_list(items: List[Any], max_items: int = 3, show_total: bool = True)
     return shown
 
 
-def format_bytes(bytes_value: int) -> str:
+def format_bytes(bytes_value: float) -> str:  # Changed from int to float
     """
     Format bytes to human readable format
 

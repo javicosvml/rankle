@@ -2,7 +2,6 @@
 HTTP Session management for Rankle
 """
 
-from typing import Optional
 import sys
 
 try:
@@ -22,7 +21,7 @@ from config.settings import DEFAULT_HEADERS, DEFAULT_TIMEOUT, MAX_REDIRECTS
 class SessionManager:
     """Manages HTTP sessions with realistic headers"""
 
-    def __init__(self, user_agent: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT):
+    def __init__(self, user_agent: str | None = None, timeout: int = DEFAULT_TIMEOUT):
         """
         Initialize session manager
 
@@ -33,7 +32,7 @@ class SessionManager:
         self.timeout = timeout
         self.session = self._create_session(user_agent)
 
-    def _create_session(self, user_agent: Optional[str] = None) -> requests.Session:
+    def _create_session(self, user_agent: str | None = None) -> requests.Session:
         """
         Create requests session with realistic headers
 

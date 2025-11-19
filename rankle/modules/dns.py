@@ -3,7 +3,7 @@ DNS enumeration and analysis module for Rankle
 """
 
 import sys
-from typing import Dict, List, Optional, Any
+from typing import Any
 
 try:
     import dns.resolver
@@ -16,7 +16,7 @@ except ImportError:
     print("=" * 80 + "\n")
     sys.exit(1)
 
-from config.settings import DNS_TIMEOUT, DNS_NAMESERVERS
+from config.settings import DNS_NAMESERVERS, DNS_TIMEOUT
 from rankle.utils.helpers import truncate_list
 
 
@@ -48,7 +48,7 @@ class DNSAnalyzer:
         resolver.nameservers = DNS_NAMESERVERS
         return resolver
 
-    def analyze(self) -> Dict[str, Any]:
+    def analyze(self) -> dict[str, Any]:
         """
         Perform comprehensive DNS analysis
 
@@ -70,7 +70,7 @@ class DNSAnalyzer:
         self._print_results(dns_records)
         return dns_records
 
-    def _query_records(self, record_type: str) -> List[str]:
+    def _query_records(self, record_type: str) -> list[str]:
         """
         Query DNS records of specific type
 
@@ -92,7 +92,7 @@ class DNSAnalyzer:
         except Exception:
             return []
 
-    def _query_mx_records(self) -> List[str]:
+    def _query_mx_records(self) -> list[str]:
         """
         Query MX records with priority
 
@@ -111,7 +111,7 @@ class DNSAnalyzer:
         except Exception:
             return []
 
-    def _query_soa_record(self) -> Optional[str]:
+    def _query_soa_record(self) -> str | None:
         """
         Query SOA record
 
@@ -123,6 +123,7 @@ class DNSAnalyzer:
             if answers:
                 soa = answers[0]
                 return f"{soa.mname} {soa.rname} {soa.serial} {soa.refresh} {soa.retry} {soa.expire} {soa.minimum}"
+            return None
         except (
             dns.resolver.NXDOMAIN,
             dns.resolver.NoAnswer,
@@ -132,7 +133,7 @@ class DNSAnalyzer:
         except Exception:
             return None
 
-    def _print_results(self, dns_records: Dict[str, Any]):
+    def _print_results(self, dns_records: dict[str, Any]):
         """
         Print DNS analysis results
 
@@ -154,7 +155,10 @@ class DNSAnalyzer:
             print(f"   └─ Name Servers: {truncate_list(dns_records['NS'])}")
 
         if dns_records["TXT"]:
-            txt_display = [txt[:60] + "..." if len(txt) > 60 else txt for txt in dns_records["TXT"][:3]]
+            txt_display = [
+                txt[:60] + "..." if len(txt) > 60 else txt
+                for txt in dns_records["TXT"][:3]
+            ]
             txt_formatted = ", ".join([f'"{txt}"' for txt in txt_display])
             print(f"   └─ TXT Records: {txt_formatted}")
 
@@ -164,7 +168,7 @@ class DNSAnalyzer:
         if dns_records["CNAME"]:
             print(f"   └─ CNAME Records: {truncate_list(dns_records['CNAME'])}")
 
-    def get_cnames(self) -> List[str]:
+    def get_cnames(self) -> list[str]:
         """
         Get CNAME records for the domain
 
@@ -173,7 +177,7 @@ class DNSAnalyzer:
         """
         return self._query_records("CNAME")
 
-    def get_ip_addresses(self) -> List[str]:
+    def get_ip_addresses(self) -> list[str]:
         """
         Get all IP addresses (IPv4 and IPv6)
 
