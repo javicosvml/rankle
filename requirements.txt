@@ -1,55 +1,45 @@
 # Rankle - Web Infrastructure Reconnaissance Tool
-# Requirements file for Python dependencies
-# Compatible with Python 3.11+ (tested up to 3.14)
-# Last updated: November 2025
+# All dependencies in one file
+#
+# Install production only:  pip install -r requirements.txt
+# Install with dev tools:   pip install -r requirements.txt --all-extras
+# Or use pyproject.toml:    pip install -e ".[dev]"
 
-# ============================================================================
-# REQUIRED DEPENDENCIES
-# ============================================================================
-# These are mandatory for Rankle to function
+# =============================================================================
+# PRODUCTION DEPENDENCIES
+# =============================================================================
 
 requests>=2.31.0
-# HTTP library for making web requests
-# Replaces: curl commands
-
 dnspython>=2.4.0
-# DNS toolkit for Python
-# Replaces: dig commands
-
 beautifulsoup4>=4.12.0
-# HTML parsing library
-# Used for: Technology detection and web scraping
 
-# ============================================================================
-# OPTIONAL DEPENDENCIES
-# ============================================================================
-# These enhance functionality but are not strictly required
-# Install with: pip install rankle[extended]
-
+# Optional (enhanced features)
 python-whois>=0.9.0
-# WHOIS protocol client
-# Replaces: whois command
-# Provides: Domain registration information
-
 ipwhois>=1.2.0
-# IP address WHOIS and ASN lookup
-# Provides: Enhanced IP geolocation and network information
 
-# ============================================================================
-# INSTALLATION INSTRUCTIONS (2025)
-# ============================================================================
-#
-# Recommended: Use pyproject.toml (modern way)
-#   pip install -e .
-#   pip install -e ".[dev]"      # With dev dependencies
-#   pip install -e ".[extended]" # With optional dependencies
-#
-# Legacy: Using requirements.txt
-#   pip install -r requirements.txt
-#
-# Create virtual environment (recommended):
-#   python3.14 -m venv venv
-#   source venv/bin/activate  # On Windows: venv\Scripts\activate
-#   pip install -e .
-#
-# ============================================================================
+# =============================================================================
+# DEVELOPMENT DEPENDENCIES
+# =============================================================================
+
+# Linting & Formatting (Ruff replaces Black, isort, flake8)
+ruff>=0.8.0
+
+# Type checking
+mypy>=1.13.0
+types-requests>=2.31.0
+types-beautifulsoup4>=4.12.0
+
+# Security scanning
+bandit[toml]>=1.7.10
+pip-audit>=2.7.0
+
+# Testing
+pytest>=8.0.0
+pytest-cov>=4.1.0
+pytest-xdist>=3.5.0
+
+# Documentation
+interrogate>=1.7.0
+
+# Git hooks
+pre-commit>=3.8.0

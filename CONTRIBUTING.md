@@ -7,6 +7,7 @@ Thank you for your interest in contributing to Rankle! 🃏
 ### Reporting Bugs
 
 If you find a bug, please open an issue with:
+
 - Clear description of the problem
 - Steps to reproduce
 - Expected vs actual behavior
@@ -16,6 +17,7 @@ If you find a bug, please open an issue with:
 ### Suggesting Enhancements
 
 Enhancement suggestions are welcome! Please include:
+
 - Clear description of the feature
 - Use case and benefits
 - Potential implementation approach
@@ -25,25 +27,33 @@ Enhancement suggestions are welcome! Please include:
 
 1. **Fork the repository**
 2. **Create a feature branch**
+
    ```bash
    git checkout -b feature/amazing-feature
    ```
+
 3. **Make your changes**
    - Follow the existing code style
    - Add comments for complex logic
    - Update documentation if needed
 4. **Test your changes**
+
    ```bash
-   python rankle.py test-domain.com
+   python main.py example.com
    ```
+
 5. **Commit with clear messages**
+
    ```bash
    git commit -m "Add: Enhanced detection for XYZ CMS"
    ```
+
 6. **Push to your fork**
+
    ```bash
    git push origin feature/amazing-feature
    ```
+
 7. **Open a Pull Request**
 
 ## Development Guidelines
@@ -92,15 +102,15 @@ Before submitting:
 
 ```bash
 # Test on multiple domains
-python rankle.py example1.com
-python rankle.py example2.com
+python main.py example.com
+python main.py example.org
 
 # Test JSON export
-python rankle.py example.com --json
+python main.py example.com --output json
 jq . example_com_rankle.json
 
-# Test error handling
-python rankle.py invalid-domain-12345.com
+# Test error handling (non-existent domain)
+python main.py nonexistent.example.com
 ```
 
 ## Areas for Contribution
@@ -162,6 +172,7 @@ python rankle.py invalid-domain-12345.com
 ## Recognition
 
 Contributors will be:
+
 - Listed in CHANGELOG.md
 - Credited in release notes
 - Added to a CONTRIBUTORS.md file (if significant contribution)
@@ -169,6 +180,7 @@ Contributors will be:
 ## Questions?
 
 Feel free to open an issue for:
+
 - Implementation questions
 - Architecture discussions
 - Feature clarifications

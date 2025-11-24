@@ -35,8 +35,7 @@ def extract_domain(url: str) -> str:
     parsed = urlparse(url)
     domain = parsed.netloc or parsed.path
     # Remove port if present
-    domain = domain.split(":")[0]
-    return domain
+    return domain.split(":")[0]
 
 
 def validate_ip(ip: str) -> bool:

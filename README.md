@@ -3,7 +3,7 @@
 # 🃏 Rankle - Web Infrastructure Reconnaissance Tool
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B%20%7C%203.14-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
 [![GitHub Actions](https://github.com/javicosvml/rankle/workflows/Docker%20Build%20Test/badge.svg)](https://github.com/javicosvml/rankle/actions)
 
@@ -11,36 +11,54 @@ Named after **Rankle, Master of Pranks** from Magic: The Gathering - a legendary
 
 A comprehensive web infrastructure analyzer using 100% Open Source Python libraries with **no API keys required**.
 
-> **🎉 NEW v2.0 (Nov 2025)**: Complete refactor with **modular architecture** following Python 3.14 best practices! See [MIGRATION.md](MIGRATION.md) for details.
+> **Features**: Modular architecture with **centralized configuration**, **retry logic**, and **concurrent scanning**!
 
-## 🏗️ Project Structure (v2.0 - 2025 Standards)
+## 🏗️ Project Structure
 
-Rankle follows **Python 3.14 (2025) best practices** with modern packaging:
+Rankle follows **Python 3.11+ best practices** with modern packaging:
 
-```
+```text
 rankle/
 ├── pyproject.toml          # Modern Python packaging (PEP 621)
 ├── main.py                 # Entry point
 ├── rankle/                 # Main package
 │   ├── core/              # Scanner & session management
-│   ├── modules/           # Reconnaissance modules (DNS, SSL, etc.)
-│   ├── detectors/         # Technology detectors (CMS, WAF, etc.)
-│   ├── utils/             # Utilities & validators
+│   │   ├── scanner.py     # RankleScanner - orchestrates all modules
+│   │   └── session.py     # SessionManager - HTTP with retry logic
+│   ├── modules/           # Reconnaissance modules
+│   │   ├── dns.py         # DNS enumeration
+│   │   ├── ssl.py         # TLS/SSL certificate analysis
+│   │   ├── subdomains.py  # Subdomain discovery via CT logs
+│   │   ├── whois.py       # WHOIS lookup
+│   │   ├── geolocation.py # IP geolocation & cloud detection
+│   │   ├── http_fingerprint.py  # HTTP fingerprinting (concurrent)
+│   │   └── security_headers.py  # Security headers analysis
+│   ├── detectors/         # Technology detectors
+│   │   ├── technology.py  # CMS, frameworks, libraries detection
+│   │   ├── cdn.py         # CDN detection (20+ providers)
+│   │   ├── waf.py         # WAF detection (15+ solutions)
+│   │   └── origin.py      # Origin discovery behind CDN/WAF
+│   ├── utils/             # Utilities
+│   │   ├── validators.py  # Domain/IP validation
+│   │   ├── helpers.py     # JSON save, truncate utilities
+│   │   └── rate_limiter.py # Request rate limiting
 │   └── reports/           # Report generation
-├── config/                 # Configuration & settings
-├── tests/                  # Unit tests (pytest)
-└── rankle.py              # Legacy (deprecated in v3.0)
+├── config/                 # Configuration
+│   ├── settings.py        # Timeouts, User-Agent, DNS servers
+│   ├── patterns.py        # Cloud providers, subdomains, ASN patterns
+│   └── tech_signatures.json  # Technology detection signatures
+└── tests/                  # Unit tests (pytest)
 ```
 
 **Standards Compliance**:
-- ✅ **Python 3.14** compatible (latest stable as of Oct 2025)
+
+- ✅ **Python 3.11+** compatible (tested on 3.11, 3.12, 3.13)
 - ✅ **PEP 621** - Modern packaging with `pyproject.toml`
 - ✅ **PEP 517/518** - Build system specification
 - ✅ **Type hints** - Full typing support
-- ✅ **Black formatted** - Code style consistency
+- ✅ **Ruff formatted** - Code style consistency (replaces Black, isort, flake8)
 
 **Benefits**: Better collaboration, easier testing, cleaner code, extensible architecture.
-**Migration Guide**: [MIGRATION.md](MIGRATION.md)
 
 ## 🎯 Features
 
@@ -61,16 +79,13 @@ rankle/
 - **Geolocation** - Hosting provider and geographic information with reverse DNS
 - **Export Options** - JSON (machine-readable) and text (human-readable) formats
 
-### ✨ New in v2.0: Enhanced Technology Detection
+### ✨ Key Optimizations
 
-Rankle now includes an advanced technology detection system with:
-- **Confidence Scoring**: Each technology gets a 0-100% confidence score based on multiple indicators
-- **Version Detection**: Automatically detects specific versions (e.g., WordPress 6.4.2, jQuery 3.6.0)
-- **Multi-Category Support**: CMS, E-commerce, Frameworks, Libraries, Analytics, CDN, Web Servers, etc.
-- **Signature-Based Detection**: Uses `tech_signatures.json` database for extensible detection
-- **Visual Indicators**: 🟢 High (80%+), 🟡 Medium (50-79%), 🟠 Low (30-49%) confidence
-
-See [ENHANCED_DETECTION.md](ENHANCED_DETECTION.md) for detailed documentation.
+- **Centralized Configuration**: Cloud providers, subdomains, and ASN patterns in `config/patterns.py`
+- **Automatic Retry Logic**: HTTP requests with exponential backoff (429, 500, 502, 503, 504)
+- **Concurrent Scanning**: ThreadPoolExecutor for parallel path checking (~60-70% faster)
+- **Connection Pooling**: Optimized HTTP sessions with 10 connections, 20 max pool size
+- **Enhanced Technology Detection**: Confidence scoring (0-100%), version detection, 30+ technologies
 
 ## 📋 Table of Contents
 
@@ -88,29 +103,25 @@ See [ENHANCED_DETECTION.md](ENHANCED_DETECTION.md) for detailed documentation.
 
 ## 🚀 Quick Start
 
-### Option 1: Python (New Modular Structure - v2.0)
+### Option 1: Python
 
 ```bash
 # Install dependencies
 pip install -r requirements.txt
 
-# Run scan with new entry point
+# Run scan (prints to terminal only)
 python main.py example.com
 
-# With options
-python main.py example.com --output json
-python main.py example.com --no-save
-python main.py example.com --verbose
+# Save results to file
+python main.py example.com -o json      # Save JSON
+python main.py example.com -o text      # Save text report
+python main.py example.com -o both      # Save both formats
+
+# Verbose output
+python main.py example.com -v
 ```
 
-### Option 2: Python (Legacy)
-
-```bash
-# Still works, but being deprecated
-python rankle.py example.com
-```
-
-### Option 3: Docker (Recommended)
+### Option 2: Docker (Recommended)
 
 ```bash
 # Build locally
@@ -121,7 +132,6 @@ docker run --rm rankle example.com
 ### Quick Test
 
 ```bash
-# Basic scan (new way)
 python main.py example.com
 
 # Expected output:
@@ -150,7 +160,7 @@ pip install python-whois
 pip install -r requirements.txt
 
 # For development (includes linting, formatting, pre-commit)
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 pre-commit install
 ```
 
@@ -193,7 +203,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # Run
-python rankle.py example.com
+python main.py example.com
 ```
 
 ## 💻 Usage
@@ -201,48 +211,53 @@ python rankle.py example.com
 ### Basic Commands
 
 ```bash
-# Basic scan
-python rankle.py example.com
+# Basic scan (terminal output only - default)
+python main.py example.com
 
 # Save as JSON (for automation)
-python rankle.py example.com --json
+python main.py example.com -o json
 
 # Save as text report (human-readable)
-python rankle.py example.com --text
+python main.py example.com -o text
 
 # Save both formats
-python rankle.py example.com --output both
+python main.py example.com -o both
+
+# Verbose output (show debug info)
+python main.py example.com -v
 
 # Show help
-python rankle.py --help
+python main.py --help
 ```
 
 ### Docker Usage
 
 ```bash
-# Basic scan (no output saved)
+# Basic scan (terminal output only)
 docker run --rm rankle example.com
 
 # Save JSON output
-docker run --rm -v $(pwd)/output:/output rankle example.com --json
+docker run --rm -v $(pwd)/output:/output rankle example.com -o json
 
 # Save text report
-docker run --rm -v $(pwd)/output:/output rankle example.com --text
+docker run --rm -v $(pwd)/output:/output rankle example.com -o text
 
 # Save both formats
-docker run --rm -v $(pwd)/output:/output rankle example.com --output both
+docker run --rm -v $(pwd)/output:/output rankle example.com -o both
 
-# Interactive mode (with save prompt)
+# Interactive mode
 docker run --rm -it rankle example.com
 ```
 
 ### Command Line Options
 
-```
---json, -j          Save results as JSON
---text, -t          Save results as text report
---output, -o TYPE   Save output (json/text/both)
---help, -h          Show help message
+```text
+-o, --output TYPE   Save output to file (json/text/both)
+                    If not specified, only prints to terminal
+-v, --verbose       Enable verbose output with debug info
+--output-dir PATH   Output directory (default: ./output)
+--version           Show version number
+-h, --help          Show help message
 ```
 
 ## 📊 Output Formats
@@ -252,6 +267,7 @@ docker run --rm -it rankle example.com
 **Purpose:** Machine-readable structured data for automation and integration
 
 **Use Cases:**
+
 - Automated processing with `jq`
 - Integration with security tools (Nuclei, Nmap, Metasploit)
 - Database storage (PostgreSQL JSONB, Elasticsearch)
@@ -259,6 +275,7 @@ docker run --rm -it rankle example.com
 - Pipeline integration (SIEM/SOAR)
 
 **Example:**
+
 ```bash
 # Extract IPs
 cat scan.json | jq -r '.dns.A[]'
@@ -278,14 +295,16 @@ cat scan.json | jq -r '.subdomains[]' | nuclei -l -
 **Purpose:** Human-readable technical report
 
 **Characteristics:**
+
 - Compact, technical format
 - Section-based layout
 - grep/awk friendly
 - Quick manual review
 
 **Structure:**
-```
-DOMAIN: target.com
+
+```text
+DOMAIN: example.com
 SCAN_TIME: 2025-11-12 02:00:00
 STATUS: 200
 
@@ -298,6 +317,7 @@ STATUS: 200
 ```
 
 **Example:**
+
 ```bash
 # Extract security section
 grep -A 10 "^\[SECURITY\]" report.txt
@@ -311,6 +331,7 @@ awk '/^\[SUBDOMAINS\]/,/^\[/' report.txt | grep -v "^\["
 ### Content Management Systems (16+)
 
 #### Drupal (Enhanced Detection)
+
 - **15+ detection patterns**: `/core/misc/drupal.js`, `/user/login`, `/sites/default/`
 - **HTML attributes**: `data-drupal-*`, `views-`, `block-`, `node-`
 - **robots.txt analysis**
@@ -318,6 +339,7 @@ awk '/^\[SUBDOMAINS\]/,/^\[/' report.txt | grep -v "^\["
 - Successfully detects Drupal even behind WAF protection
 
 #### Other CMS
+
 - WordPress (wp-content, wp-includes, wp-json)
 - Joomla (option=com_, joomla!)
 - Magento (mage/cookies, skin/frontend)
@@ -329,12 +351,14 @@ awk '/^\[SUBDOMAINS\]/,/^\[/' report.txt | grep -v "^\["
 ### Cloud Providers (14+)
 
 **Detection Methods:**
+
 - ASN (Autonomous System Number) matching
 - ISP/Organization name patterns
 - Reverse DNS hostname analysis
 - Confidence scoring (low/medium/high)
 
 **Supported Providers:**
+
 - **AWS** (Amazon Web Services) - AS16509, AS14618, AS8987
 - **Azure** (Microsoft Azure) - AS8075, AS8068
 - **GCP** (Google Cloud Platform) - AS15169, AS19527, AS396982
@@ -391,6 +415,7 @@ awk '/^\[SUBDOMAINS\]/,/^\[/' report.txt | grep -v "^\["
 **Purpose:** Find real infrastructure behind WAF/CDN protection
 
 **Passive Detection Methods:**
+
 1. **Subdomain Analysis** - Check non-CDN subdomains (origin, direct, admin, mail, ftp, vpn, cpanel)
 2. **MX Records** - Mail servers often reveal origin network/ASN
 3. **SPF/TXT Records** - Parse SPF records for authorized IP ranges (ip4: directives)
@@ -398,7 +423,8 @@ awk '/^\[SUBDOMAINS\]/,/^\[/' report.txt | grep -v "^\["
 5. **Common Patterns** - Test predictable origin domains (origin.*, direct.*, admin.*, backend.*, api.*)
 
 **Example Output:**
-```
+
+```text
 🎯 ORIGIN INFRASTRUCTURE (Behind WAF/CDN)
 ════════════════════════════════════════════════════════════════════════════════
   Detection Methods: mx_records, spf_records, pattern_discovery
@@ -409,10 +435,11 @@ awk '/^\[SUBDOMAINS\]/,/^\[/' report.txt | grep -v "^\["
     • 148.163.150.174 → AWS (high confidence)
 
   Direct Access Domains (1 found):
-    • api.nike.com
+    • api.example.com
 ```
 
 **Use Cases:**
+
 - Penetration testing (authorized)
 - Security research
 - Infrastructure analysis
@@ -420,6 +447,7 @@ awk '/^\[SUBDOMAINS\]/,/^\[/' report.txt | grep -v "^\["
 - Competitor analysis
 
 **Ethical Considerations:**
+
 - ⚠️ All methods are **passive** and use public DNS/SSL data
 - ✅ No active attacks or unauthorized access attempts
 - ✅ Complies with responsible disclosure practices
@@ -430,16 +458,19 @@ awk '/^\[SUBDOMAINS\]/,/^\[/' report.txt | grep -v "^\["
 **8 Advanced Techniques to identify infrastructure:**
 
 #### **1. HTTP Methods Testing**
+
 - Tests: OPTIONS, HEAD, TRACE, PUT, DELETE, PATCH
 - Identifies: Misconfigurations, API capabilities, server behavior
-- Example: `api.github.com` allows OPTIONS, HEAD, TRACE, PUT, DELETE, PATCH
+- Example: `api.example.com` allows OPTIONS, HEAD, TRACE, PUT, DELETE, PATCH
 
 #### **2. Server Signature Analysis**
+
 - Extracts version numbers from Server/X-Powered-By headers
 - Pattern matching for: Apache, Nginx, IIS, LiteSpeed, Tomcat, Node.js, Express
 - Example: `Server: nginx/1.21.6` → Nginx version 1.21.6
 
 #### **3. API Endpoint Discovery**
+
 - Probes 15+ common endpoints:
   - REST APIs: `/api`, `/api/v1`, `/api/v2`, `/rest`
   - GraphQL: `/graphql`
@@ -450,6 +481,7 @@ awk '/^\[SUBDOMAINS\]/,/^\[/' report.txt | grep -v "^\["
 - Reports: endpoint, status code, content-type
 
 #### **4. Exposed Sensitive Files**
+
 - Checks for common security issues:
   - **Development files**: `/phpinfo.php`, `/info.php`
   - **Version control**: `/.git/config`, `/.git/HEAD`, `/.svn/entries`
@@ -460,6 +492,7 @@ awk '/^\[SUBDOMAINS\]/,/^\[/' report.txt | grep -v "^\["
 - ⚠️ **Security Risk**: Reports exposed files
 
 #### **5. Cookie Analysis & Technology Identification**
+
 - Analyzes cookie names to identify technologies:
   - `PHPSESSID` → PHP
   - `JSESSIONID` → Java/Tomcat
@@ -471,12 +504,14 @@ awk '/^\[SUBDOMAINS\]/,/^\[/' report.txt | grep -v "^\["
 - Checks security attributes: Secure, HttpOnly, SameSite
 
 #### **6. Error Page Fingerprinting**
+
 - Analyzes 404/error pages to identify:
   - **Web Servers**: Apache, Nginx, IIS, Tomcat
   - **Frameworks**: Django, Flask, Express, Rails
 - Example: Django error pages reveal "DisallowedHost" and framework version
 
 #### **7. Technology-Specific Headers**
+
 - Detects headers that reveal infrastructure:
   - `X-AspNet-Version` → ASP.NET version
   - `X-Drupal-Cache` → Drupal CMS
@@ -487,6 +522,7 @@ awk '/^\[SUBDOMAINS\]/,/^\[/' report.txt | grep -v "^\["
   - `X-Azure-Ref` → Microsoft Azure
 
 #### **8. Response Time Analysis**
+
 - Measures server response time in milliseconds
 - Can indicate:
   - Server location (latency)
@@ -495,7 +531,8 @@ awk '/^\[SUBDOMAINS\]/,/^\[/' report.txt | grep -v "^\["
 - Example: 40ms (fast, likely cached or nearby)
 
 **Example Output:**
-```
+
+```text
 🔬 ADVANCED FINGERPRINTING
 ════════════════════════════════════════════════════════════════════════════════
   Server Versions:
@@ -528,7 +565,7 @@ awk '/^\[SUBDOMAINS\]/,/^\[/' report.txt | grep -v "^\["
 
 ```bash
 # Direct subdomain pipe
-python rankle.py target.com --json | \
+python main.py example.com --output json | \
   jq -r '.subdomains[]' | \
   nuclei -l - -t nuclei-templates/
 
@@ -569,7 +606,7 @@ DOMAIN=$1
 OUTPUT_DIR="recon_${DOMAIN}"
 
 # 1. Rankle reconnaissance
-python rankle.py $DOMAIN --json
+python main.py $DOMAIN --output json
 
 # 2. Extract and verify subdomains
 cat ${DOMAIN/./_}_rankle.json | jq -r '.subdomains[]' | \
@@ -587,66 +624,62 @@ nuclei -l ${OUTPUT_DIR}/live_subdomains.txt \
 echo "Reconnaissance complete for ${DOMAIN}"
 ```
 
-## 📈 Version History
+## 📈 Features Overview
 
-### v1.1 - Enhanced Detection (Current)
+### Architecture
 
-**Major Improvements:**
-- ✅ **Enhanced Drupal Detection** (15+ patterns, 275% improvement)
-- ✅ **CDN Detection** (20+ providers, 67% improvement)
-- ✅ **WAF Detection** (15+ solutions, 88% improvement)
-- ✅ **WHOIS Reliability** (socket fallback method)
-- ✅ **JavaScript Libraries** (15+ libraries detected)
-- ✅ **Bot Protection Awareness** (Voight-Kampff, challenges)
+- ✅ **Modular Architecture** - Separated modules for DNS, SSL, subdomains, detection
+- ✅ **Centralized Configuration** - `config/patterns.py` with cloud providers, subdomains, ASN patterns
+- ✅ **Automatic Retry Logic** - Exponential backoff for transient HTTP errors (429, 5xx)
+- ✅ **Concurrent Scanning** - ThreadPoolExecutor for parallel path checking
+- ✅ **Connection Pooling** - Optimized HTTP sessions (10 connections, 20 pool size)
+- ✅ **Code Quality** - Ruff linting, mypy type checking, pre-commit hooks
 
-**Statistics:**
+### Detection Capabilities
 
-| Feature | v1.0 | v1.1 | Improvement |
-|---------|------|------|-------------|
-| CMS Systems | 13 | 16 | +23% |
-| Drupal Patterns | 4 | 15+ | +275% |
-| CDN Providers | 12 | 20+ | +67% |
-| WAF Solutions | 8 | 15+ | +88% |
-| Detection Methods | 1 | 4 | +300% |
-| JS Libraries | 0 | 15+ | New |
-| WHOIS Fallback | No | Yes | New |
-
-### v1.0 - Initial Release
-
-- Complete DNS enumeration
+- Complete DNS enumeration (A, AAAA, MX, NS, TXT, SOA, CNAME)
 - Subdomain discovery via Certificate Transparency
-- Basic technology detection
+- Technology detection with confidence scoring (CMS, frameworks, libraries)
 - TLS/SSL certificate analysis
 - HTTP security headers audit
-- Basic CDN/WAF detection
-- Geolocation information
-- WHOIS lookup
+- CDN Detection (20+ providers)
+- WAF Detection (15+ solutions)
+- Origin infrastructure discovery (passive techniques)
+- Geolocation and cloud provider detection
+- WHOIS lookup with fallback methods
 - JSON and text export formats
 
 ## 🗂️ Repository Information
 
 ### Repository Structure
 
-```
+```text
 rankle/
-├── rankle.py              # Main reconnaissance tool (52KB)
-├── requirements.txt       # Python dependencies
-├── Dockerfile            # Alpine-based container (~370MB, non-root user, healthcheck)
-├── README.md             # This file
-├── CHANGELOG.md          # Detailed version history
-├── LICENSE               # MIT License
-├── SECURITY.md           # Security policy
-├── CONTRIBUTING.md       # Contribution guidelines
-├── .gitignore            # Git exclusions
-├── .dockerignore         # Docker build exclusions
+├── main.py               # Entry point
+├── rankle/               # Main package (modular architecture)
+│   ├── core/            # Scanner & session management (with retry logic)
+│   ├── modules/         # Reconnaissance modules (concurrent scanning)
+│   ├── detectors/       # Technology detectors (CDN, WAF, origin)
+│   └── utils/           # Utilities, validators, rate limiter
+├── config/               # Configuration & centralized patterns
+│   ├── settings.py      # Timeouts, headers, DNS servers
+│   └── patterns.py      # Cloud providers, subdomains, ASN data
+├── tests/                # Unit tests (pytest)
+├── requirements.txt      # Python dependencies
+├── pyproject.toml        # Modern Python packaging (PEP 621)
+├── Dockerfile           # Alpine-based container (~370MB, non-root user)
+├── README.md            # This file
+├── CHANGELOG.md         # Detailed version history
+├── LICENSE              # MIT License
+├── SECURITY.md          # Security policy
+├── CONTRIBUTING.md      # Contribution guidelines
+├── .gitignore           # Git exclusions
+├── .dockerignore        # Docker build exclusions
+├── .pre-commit-config.yaml  # Pre-commit hooks (ruff, mypy, bandit)
 ├── .github/
 │   └── workflows/
 │       └── docker-build.yml  # CI/CD automation
-├── examples/             # Integration scripts
-│   ├── nuclei_pipeline.sh
-│   ├── nmap_pipeline.sh
-│   └── full_recon_chain.sh
-└── test_enhancements.sh  # Testing script
+└── examples/            # Integration scripts
 ```
 
 ### Getting Started with Development
@@ -662,12 +695,10 @@ source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Make changes
-# ... edit files ...
+pre-commit install
 
 # Test your changes
-python rankle.py test-domain.com
+python main.py example.com
 
 # Commit and push
 git add .
@@ -691,6 +722,7 @@ gh release create v1.2.0 --title "v1.2.0" --notes "Release notes here"
 ### Security Features
 
 Rankle implements several security measures:
+
 - **No shell injection** - Never uses `shell=True`
 - **Input validation** - Regex-based domain validation
 - **Timeout controls** - Prevents hanging requests
@@ -701,12 +733,14 @@ Rankle implements several security measures:
 ### Responsible Usage
 
 **Authorized Use Only:**
+
 - ✅ Authorized penetration testing
 - ✅ Bug bounty programs (with permission)
 - ✅ Security research (on your own systems)
 - ✅ Educational purposes
 
 **Prohibited Use:**
+
 - ❌ Unauthorized access attempts
 - ❌ Malicious reconnaissance
 - ❌ Illegal activities
@@ -726,86 +760,70 @@ Rankle implements several security measures:
 
 ## 🔍 API Reference
 
-<!-- API_START -->
-<!-- AUTO-GENERATED: Do not edit manually -->
+### 📚 Main Classes
 
-### 📚 Public Methods
+Rankle uses a modular architecture with specialized classes:
 
-Main public methods available in the Rankle class:
+#### `RankleScanner` (rankle/core/scanner.py)
 
-#### `analyze_http_headers()`
+Main orchestrator class that coordinates all reconnaissance modules.
 
-Analyze HTTP headers and detect technologies from headers
+```python
+from rankle.core.scanner import RankleScanner
 
----
+# Basic usage
+with RankleScanner("example.com", verbose=True) as scanner:
+    results = scanner.run_full_scan()
 
-#### `find_origin_infrastructure()`
+# Methods:
+# - run_full_scan() -> dict[str, Any]  # Execute all modules
+# - close()                             # Cleanup resources
+```
 
-Try to find origin infrastructure behind WAF/CDN using passive techniques
+#### `SessionManager` (rankle/core/session.py)
 
-ETHICAL METHODS ONLY - No active attacks
+HTTP session with automatic retry and connection pooling.
 
----
+```python
+from rankle.core.session import SessionManager
 
-#### `enumerate_subdomains_crtsh()`
+with SessionManager(timeout=45, retries=3) as session:
+    response = session.get("https://example.com")
 
-Enumerate subdomains using Certificate Transparency logs
+# Features:
+# - Exponential backoff for 429, 500, 502, 503, 504
+# - Connection pooling (10 connections, 20 max)
+# - Realistic browser headers
+```
 
-Queries crt.sh without requiring API keys - 100% passive
+### 📦 Modules (rankle/modules/)
 
----
+| Module | Class | Description |
+|--------|-------|-------------|
+| `dns.py` | `DNSAnalyzer` | DNS enumeration (A, AAAA, MX, NS, TXT, SOA, CNAME) |
+| `ssl.py` | `SSLAnalyzer` | TLS/SSL certificate analysis |
+| `subdomains.py` | `SubdomainDiscovery` | Subdomain discovery via Certificate Transparency |
+| `whois.py` | `WHOISLookup` | WHOIS lookup with fallback methods |
+| `geolocation.py` | `GeolocationLookup` | IP geolocation & cloud provider detection |
+| `http_fingerprint.py` | `HTTPFingerprinter` | HTTP fingerprinting (concurrent) |
+| `security_headers.py` | `SecurityHeadersAuditor` | Security headers audit |
 
-#### `analyze_dns()`
+### 🔎 Detectors (rankle/detectors/)
 
-Comprehensive DNS enumeration using dnspython
+| Detector | Class | Description |
+|----------|-------|-------------|
+| `technology.py` | `TechnologyDetector` | CMS, frameworks, libraries detection |
+| `cdn.py` | `CDNDetector` | CDN detection (20+ providers) |
+| `waf.py` | `WAFDetector` | WAF detection (15+ solutions) |
+| `origin.py` | `OriginDiscovery` | Origin infrastructure discovery |
 
-No external dependencies required
+### ⚙️ Configuration (config/)
 
----
-
-#### `analyze_tls_certificate()`
-
-Analyze TLS/SSL certificate using Python's ssl module
-
-No external tools required - pure Python
-
----
-
-#### `advanced_fingerprinting(response = None)`
-
-Advanced fingerprinting using multiple techniques
-
----
-
-#### `detect_technologies(response = None)`
-
-Detect web technologies including CMS, frameworks, and libraries
-
-Analyzes HTML content and performs fingerprinting
-
----
-
-#### `detect_cdn_waf(headers, cnames = None)`
-
-Detect CDN and Web Application Firewall
-
----
-
-#### `detect_cloud_provider(ip, isp_name = None, hostname = None)`
-
-Detect cloud/hosting provider based on IP, ISP, and hostname
-
----
-
-#### `analyze_geolocation(ip)`
-
-Analyze geolocation using free public API
-
-Uses ipapi.co which doesn't require API key for basic usage
-
----
-
-<!-- API_END -->
+| File | Description |
+|------|-------------|
+| `settings.py` | Timeouts, User-Agent, DNS servers, rate limits |
+| `patterns.py` | Cloud providers, subdomains, ASN patterns (centralized) |
+| `tech_signatures.json` | Technology detection signatures |
 
 ---
 
@@ -816,6 +834,7 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for det
 ### Areas for Contribution
 
 **High Priority:**
+
 - Additional CMS fingerprints (Django, Laravel, Rails)
 - More CDN providers (regional CDNs)
 - Enhanced WAF detection patterns
@@ -823,6 +842,7 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for det
 - Performance optimizations
 
 **Medium Priority:**
+
 - Additional JavaScript library detection
 - Server-side technology detection
 - Database detection (via error messages)
@@ -830,6 +850,7 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for det
 - API detection
 
 **Documentation:**
+
 - Usage examples
 - Integration guides
 - Video tutorials
@@ -840,7 +861,7 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for det
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
 3. Make your changes
-4. Test: `python rankle.py test-domain.com`
+4. Test: `python main.py example.com`
 5. Commit: `git commit -m "Add: Amazing feature"`
 6. Push: `git push origin feature/amazing-feature`
 7. Open a Pull Request
@@ -854,6 +875,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 This tool is provided for **educational and authorized security testing purposes only**.
 
 Users must:
+
 - Obtain proper authorization before scanning any target
 - Comply with all applicable laws and regulations
 - Use the tool responsibly and ethically
@@ -877,10 +899,10 @@ The authors and contributors are not responsible for any misuse or damage caused
 
 ## 🔗 Links
 
-- **Repository**: https://github.com/javicosvml/rankle
-- **Documentation**: https://github.com/javicosvml/rankle/blob/main/README.md
-- **Changelog**: https://github.com/javicosvml/rankle/blob/main/CHANGELOG.md
-- **License**: https://github.com/javicosvml/rankle/blob/main/LICENSE
+- **Repository**: <https://github.com/javicosvml/rankle>
+- **Documentation**: <https://github.com/javicosvml/rankle/blob/main/README.md>
+- **Changelog**: <https://github.com/javicosvml/rankle/blob/main/CHANGELOG.md>
+- **License**: <https://github.com/javicosvml/rankle/blob/main/LICENSE>
 
 ---
 

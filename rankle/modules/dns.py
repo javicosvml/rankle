@@ -5,6 +5,7 @@ DNS enumeration and analysis module for Rankle
 import sys
 from typing import Any
 
+
 try:
     import dns.resolver
 except ImportError:

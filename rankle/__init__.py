@@ -10,4 +10,5 @@ __license__ = "MIT"
 
 from .core.scanner import RankleScanner
 
+
 __all__ = ["RankleScanner"]

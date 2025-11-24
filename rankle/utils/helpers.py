@@ -18,8 +18,9 @@ def load_json_file(filepath: Path) -> dict[str, Any]:
         Dictionary with JSON content
     """
     try:
-        with open(filepath, encoding="utf-8") as f:
-            return json.load(f)
+        with filepath.open(encoding="utf-8") as f:
+            result: dict[str, Any] = json.load(f)
+            return result
     except Exception as e:
         print(f"Error loading JSON file {filepath}: {e}")
         return {}
@@ -39,7 +40,7 @@ def save_json_file(data: dict[str, Any], filepath: Path, indent: int = 2) -> boo
     """
     try:
         filepath.parent.mkdir(parents=True, exist_ok=True)
-        with open(filepath, "w", encoding="utf-8") as f:
+        with filepath.open("w", encoding="utf-8") as f:
             json.dump(data, f, indent=indent, ensure_ascii=False)
         return True
     except Exception as e:

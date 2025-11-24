@@ -6,15 +6,15 @@ Currently supported versions:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 1.1.x   | :white_check_mark: |
-| 1.0.x   | :x:                |
+| 2.x.x   | :white_check_mark: |
+| 1.x.x   | :x:                |
 
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability in Rankle, please report it responsibly:
 
 1. **DO NOT** open a public issue
-2. Report via GitHub Security Advisories: https://github.com/javicosvml/rankle/security/advisories/new
+2. Report via GitHub Security Advisories: <https://github.com/javicosvml/rankle/security/advisories/new>
 3. Include:
    - Description of the vulnerability
    - Steps to reproduce
@@ -36,12 +36,14 @@ When using Rankle:
 ## Responsible Disclosure
 
 Rankle is designed for:
+
 - ✅ Authorized penetration testing
 - ✅ Bug bounty programs (with permission)
 - ✅ Security research (on your own systems)
 - ✅ Educational purposes
 
 Rankle is NOT intended for:
+
 - ❌ Unauthorized access attempts
 - ❌ Malicious reconnaissance
 - ❌ Illegal activities
@@ -60,6 +62,7 @@ Rankle implements several security measures:
 ## Updates
 
 Security updates will be released as patch versions and announced via:
+
 - GitHub Releases
 - CHANGELOG.md
 - GitHub Security Advisories (for critical issues)

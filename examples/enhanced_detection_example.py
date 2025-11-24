@@ -8,10 +8,11 @@ Demonstrates the new confidence-based technology detection system
 import os
 import sys
 
-# Add parent directory to path  # noqa: E402
+
+# Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rankle import Rankle  # noqa: E402
+from rankle import Rankle
 
 
 def main():
@@ -25,7 +26,7 @@ def main():
     print("\n📝 Example 1: Basic Enhanced Detection")
     print("-" * 80)
 
-    target = "wordpress.org"
+    target = "example.com"
     print(f"\nTarget: {target}")
 
     try:
@@ -74,7 +75,7 @@ def main():
     print("📝 Example 2: Enhanced vs Legacy Detection Comparison")
     print("-" * 80)
 
-    target2 = "github.com"
+    target2 = "example.com"
     print(f"\nTarget: {target2}")
 
     try:
@@ -103,7 +104,7 @@ def main():
     print("📝 Example 3: Detailed Detection Data")
     print("-" * 80)
 
-    target3 = "reactjs.org"
+    target3 = "example.com"
     print(f"\nTarget: {target3}")
 
     try:

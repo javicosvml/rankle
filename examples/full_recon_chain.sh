@@ -13,7 +13,7 @@ mkdir -p $WORKSPACE
 echo "[*] Workspace: $WORKSPACE"
 
 echo "[1/5] Rankle reconnaissance"
-docker run --rm -v $(pwd)/$WORKSPACE:/output rankle $DOMAIN --output both
+docker run --rm -v "$(pwd)/$WORKSPACE:/output" rankle "$DOMAIN" --output both
 JSON="$WORKSPACE/${DOMAIN//./_}_rankle.json"
 
 echo "[2/5] Extract and deduplicate subdomains"

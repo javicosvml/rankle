@@ -20,8 +20,10 @@ A comprehensive web infrastructure analyzer:
 
 import argparse
 import sys
-from datetime import datetime
+import traceback
+from datetime import UTC, datetime
 from pathlib import Path
+
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -71,9 +73,10 @@ def parse_arguments():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python main.py example.com
-  python main.py https://example.com --output json
-  python main.py example.com --no-save
+  python main.py example.com              # Scan and print to terminal
+  python main.py example.com -o json      # Save JSON report
+  python main.py example.com -o both      # Save JSON and text reports
+  python main.py example.com -v           # Verbose output
 
 For more information, visit: https://github.com/javicosvml/rankle
         """,
@@ -88,12 +91,8 @@ For more information, visit: https://github.com/javicosvml/rankle
         "-o",
         "--output",
         choices=["json", "text", "both"],
-        default="both",
-        help="Output format (default: both)",
-    )
-
-    parser.add_argument(
-        "--no-save", action="store_true", help="Don't save output to files"
+        default=None,
+        help="Save output to file (json/text/both). If not specified, only prints to terminal.",
     )
 
     parser.add_argument(
@@ -107,7 +106,7 @@ For more information, visit: https://github.com/javicosvml/rankle
         "-v", "--verbose", action="store_true", help="Enable verbose output"
     )
 
-    parser.add_argument("--version", action="version", version="Rankle v2.0.0")
+    parser.add_argument("--version", action="version", version="Rankle v1.0.0")
 
     return parser.parse_args()
 
@@ -130,7 +129,7 @@ def main():
     print("🃏 RANKLE - Web Infrastructure Reconnaissance")
     print("=" * 80)
     print(f"🎯 Target: {domain}")
-    print(f"⏰ Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"⏰ Timestamp: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 80)
 
     try:
@@ -140,20 +139,20 @@ def main():
         # Run comprehensive scan
         results = scanner.run_full_scan()
 
-        # Save results if requested
-        if not args.no_save:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        # Save results only if explicitly requested
+        if args.output:
+            timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
             base_filename = f"rankle_{sanitize_filename(domain)}_{timestamp}"
 
             if args.output in ["json", "both"]:
                 json_path = args.output_dir / f"{base_filename}.json"
                 if save_json_file(results, json_path):
-                    print(f"\n✅ Results saved to: {json_path}")
+                    print(f"\n📁 JSON saved: {json_path}")
 
             if args.output in ["text", "both"]:
                 text_path = args.output_dir / f"{base_filename}.txt"
                 scanner.save_text_report(text_path)
-                print(f"✅ Text report saved to: {text_path}")
+                print(f"📁 Text saved: {text_path}")
 
         print("\n" + "=" * 80)
         print("✅ Scan completed successfully!")
@@ -163,10 +162,8 @@ def main():
         print("\n\n⚠️  Scan interrupted by user")
         sys.exit(130)
     except Exception as e:
-        print(f"\n❌ Error during scan: {str(e)}")
+        print(f"\n❌ Error during scan: {e!s}")
         if args.verbose:
-            import traceback
-
             traceback.print_exc()
         sys.exit(1)
 
